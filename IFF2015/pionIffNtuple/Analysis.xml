@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE note [
+<!ENTITY sdir "/star/u/pokhrel/IFF_Work/runIFFfinal/pionIffNtuple">
+<!ENTITY odir "/star/u/pokhrel/SCRATCH/IFF_TREES/pionIffNtuples">
+<!ENTITY ldir "/star/data05/scratch/pokhrel/IFF_TREES/ntuples/out">
+<!ENTITY edir "/star/data05/scratch/pokhrel/IFF_TREES/ntuples/err">
+<!ENTITY jdir "/star/data05/scratch/pokhrel/IFF_TREES/ntuples/jobFiles">
+]>
+
+<job maxFilesPerProcess="1" filesPerHour="1" simulateSubmission="false" fileListSyntax="xrootd">
+
+  <command>
+    	starver SL16d
+	root4star -q -b Analysis.C\(\"$INPUTFILE0\"\,\"ntuple_${FILEBASENAME}.root\"\)
+  </command> 
+
+  <SandBox installer="ZIP">
+    <Package>
+      <File>file:./Analysis.C</File>      <!-- Required -->
+      <File>file:./StRoot/*/*</File>          <!-- Required -->
+      <File>file:./.sl73_gcc485</File>    <!-- Required -->
+      <File>file:./run15pp200transPol.txt</File>    <!--Run 15 polarization file. Required for polarization correction -->
+    </Package>
+  </SandBox>
+
+
+  <!--input URL="filelist:&sdir;/trees_StTOF.list"/--> 
+  <input URL="file:/star/u/pokhrel/GPFS/IFF_TREES/StartLessTOF/Trees/ifftree_16072038.root"/> 
+  <input URL="file:/star/u/pokhrel/GPFS/IFF_TREES/StartLessTOF/Trees/ifftree_16072041.root"/> 
+  <input URL="file:/star/u/pokhrel/GPFS/IFF_TREES/StartLessTOF/Trees/ifftree_16072047.root"/> 
+  <stdout URL="file:&ldir;/$FILEBASENAME.out"/>
+  <stderr URL="file:&edir;/$FILEBASENAME.err" />
+
+  <output fromScratch="*.root" toURL="file:&odir;/"/>
+
+
+  <Generator>
+    <Location>&jdir;/</Location>
+    <ReportLocation>&jdir;/</ReportLocation>
+  </Generator>
+</job>

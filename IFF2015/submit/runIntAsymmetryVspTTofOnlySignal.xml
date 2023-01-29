@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE note [
+<!ENTITY mdir "/star/u/pokhrel/IFF_Work/runIFFfinal/macros/TofOnly">
+<!ENTITY sdir "/star/u/pokhrel/IFF_Work/runIFFfinal/submit">
+<!ENTITY rdir "/star/u/pokhrel/IFF_Work/runIFFfinal/Results/TofOnly">
+<!ENTITY jdir "/star/u/pokhrel/SCRATCH/subFiles">
+]>
+
+
+<job maxFilesPerProcess="1" filesPerHour="1" fileListSyntax="paths" simulateSubmission="false">
+
+
+  <command>
+    	starver SL16d
+	root4star -q -b integratedSignalAsym_pT_5bins.C\(\"$INPUTFILE0\"\) 
+  </command> 
+  <SandBox installer="ZIP">
+    <Package>
+     <File>file:&mdir;/integratedSignalAsym_pT_5bins.C</File>    
+    </Package>
+  </SandBox>
+
+
+
+  <input URL="file:/star/u/pokhrel/GPFS/IFF_TREES/StartLessTOF/iffNtuplesFinal.root"/> 
+  <stdout URL="file:&rdir;/intpTSignal/asymVsintpT.out"/>
+  <stdout URL="file:&rdir;/intpTSignal/asymVsintpT.log"/>
+  <stderr URL="file:&rdir;/intpTSignal/asymVsintpT.err" />
+
+  <output fromScratch="*.root" toURL="file:&rdir;/intpTSignal/"/>
+  <output fromScratch="*.png" toURL="file:&rdir;/intpTSignal/"/>
+  <output fromScratch="*.pdf" toURL="file:&rdir;/intpTSignal/"/>
+  <output fromScratch="*.txt" toURL="file:&rdir;/intpTSignal/"/>
+
+  <Generator>
+    <Location>&jdir;/</Location>
+    <ReportLocation>&jdir;/</ReportLocation>
+  </Generator>
+</job>

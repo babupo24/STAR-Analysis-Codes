@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE note [
+<!ENTITY mdir "/star/u/pokhrel/IFF_Work/runIFFfinal/macros">
+<!ENTITY sdir "/star/u/pokhrel/IFF_Work/runIFFfinal/submit">
+<!ENTITY rdir "/star/u/pokhrel/IFF_Work/runIFFfinal/Results">
+<!ENTITY jdir "/star/u/pokhrel/SCRATCH/subFiles">
+]>
+
+
+<job maxFilesPerProcess="1" filesPerHour="1" fileListSyntax="paths" simulateSubmission="false">
+
+
+  <command>
+    	starver SL16d
+	root4star -q -b integratedAsym_Minv_9bins.C\(\"$INPUTFILE0\"\) 
+  </command> 
+
+  <SandBox installer="ZIP">
+    <Package>
+     <File>file:&mdir;/integratedAsym_Minv_9bins.C</File>    
+    </Package>
+  </SandBox>
+
+
+
+  <input URL="file:/star/u/pokhrel/GPFS/IFF_TREES/StartLessTOF/iffNtuplesFinal.root"/> 
+  <stdout URL="file:&rdir;/intMinv/asymVsintMinv.out"/>
+  <stdout URL="file:&rdir;/intMinv/asymVsintMinv.log"/>
+  <stderr URL="file:&rdir;/intMinv/asymVsintMinv.err" />
+
+  <output fromScratch="*.root" toURL="file:&rdir;/intMinv/"/>
+  <output fromScratch="*.png" toURL="file:&rdir;/intMinv/"/>
+  <output fromScratch="*.pdf" toURL="file:&rdir;/intMinv/"/>
+  <output fromScratch="*.txt" toURL="file:&rdir;/intMinv/"/>
+
+  <Generator>
+    <Location>&jdir;/</Location>
+    <ReportLocation>&jdir;/</ReportLocation>
+  </Generator>
+</job>

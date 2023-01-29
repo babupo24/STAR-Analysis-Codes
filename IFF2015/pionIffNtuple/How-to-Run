@@ -1,0 +1,22 @@
+
+This directory contains macros that run over Run 15 IFF trees. 
+
+Code works for 2015 production library: SL16d
+compile the code with the command:
+
+starver SL16d
+cons
+
+Macro description:
+
+1. StRoot contains main macros (*.cc and *h)
+2. Analysis.C is the macro that calls macro within StRoot. 
+   This can be  used for interactive running as well with the command: 
+	root4star Analysis.C
+3. Analysis.xml is the script to submit jobs for the all 2015 runs. Each run has a single root tree and jobs will be submitted for each run and so the output file will produced for each run.
+
+
+To submit job for full sample simply run the command: 
+
+	star-submit Analysis.xml  
+

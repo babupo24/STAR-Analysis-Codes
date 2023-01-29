@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE note [
+<!ENTITY mdir "/star/u/pokhrel/IFF_Work/runIFFfinal/macros/TpcOrTof">
+<!ENTITY sdir "/star/u/pokhrel/IFF_Work/runIFFfinal/submit">
+<!ENTITY rdir "/star/u/pokhrel/IFF_Work/runIFFfinal/Results/TpcOrTof">
+<!ENTITY jdir "/star/u/pokhrel/SCRATCH/subFiles">
+]>
+
+
+<job maxFilesPerProcess="1" filesPerHour="1" fileListSyntax="paths" simulateSubmission="false">
+
+
+  <command>
+    	starver SL16d
+	root4star -q -b asymmetryVspT_averaged.C\(\"$INPUTFILE0\"\) 
+  </command> 
+
+  <SandBox installer="ZIP">
+    <Package>
+     <File>file:&mdir;/asymmetryVspT_averaged.C</File>    
+    </Package>
+  </SandBox>
+
+
+
+  <input URL="file:/star/u/pokhrel/GPFS/IFF_TREES/StartLessTOF/iffNtuplesFinal.root"/> 
+  <stdout URL="file:&rdir;/pT/asymVspT.out"/>
+  <stdout URL="file:&rdir;/pT/asymVspT.log"/>
+  <stderr URL="file:&rdir;/pT/asymVspT.err" />
+
+  <output fromScratch="*.root" toURL="file:&rdir;/pT/"/>
+  <output fromScratch="*.png" toURL="file:&rdir;/pT/"/>
+  <output fromScratch="*.pdf" toURL="file:&rdir;/pT/"/>
+  <output fromScratch="*.txt" toURL="file:&rdir;/pT/"/>
+
+  <Generator>
+    <Location>&jdir;/</Location>
+    <ReportLocation>&jdir;/</ReportLocation>
+  </Generator>
+</job>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!--job minFilesPerProcess="1" maxFilesPerProcess="1"  filesPerHour="1" -->
+<job minFilesPerProcess="1" maxFilesPerProcess="1" filesPerHour="0.5" fileListSyntax="xrootd" simulateSubmission="false">
+<command>
+starver SL16d
+
+root4star -q -b run15pp200.C\(\"$FILELIST\",\"${JOBINDEX}.root\"\)\+\+
+</command>
+<SandBox>
+             <Package>
+                <File>file:/star/u/pokhrel/Run15/Run15_Analysis/IFF_Analysis/run15pp200.C</File>
+               <!-- <File>file:/star/u/pokhrel/Run15/Run15_Analysis/IFF_Analysis</File>-->
+             </Package>
+ </SandBox>
+
+<stdout URL="file:&eodir;/out/$JOBINDEX.out" />
+<stderr URL="file:&eodir;/err/$JOBINDEX.err" />
+<input URL="catalog:star.bnl.gov?filename~st_physics,trgsetupname=production_pp200trans_2015,production=P16id,filetype=daq_reco_mudst,runnumber=&runnumber;,storage!=HPSS" nFiles="all" />
+<output fromScratch="*.root" toURL="&odir;/"/>
+
+<Generator>
+    <Location>/star/data05/scratch/pokhrel/IFF_TREES/StartLessTOF/subFiles/</Location>
+    <ReportLocation>/star/data05/scratch/pokhrel/IFF_TREES/StartLessTOF/subFiles/</ReportLocation>
+  </Generator>
+
+</job>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE note [
+<!ENTITY mdir "/star/u/pokhrel/IFF_Work/runIFFfinal/macros/TofOnly">
+<!ENTITY sdir "/star/u/pokhrel/IFF_Work/runIFFfinal/submit">
+<!ENTITY rdir "/star/u/pokhrel/IFF_Work/runIFFfinal/Results/TofOnly">
+<!ENTITY jdir "/star/u/pokhrel/SCRATCH/subFiles">
+]>
+
+
+<job maxFilesPerProcess="1" filesPerHour="1" fileListSyntax="paths" simulateSubmission="false">
+
+
+  <command>
+    	starver SL16d
+	root4star -q -b asymmetryVsEta_9bin.C\(\"$INPUTFILE0\"\) 
+  </command> 
+
+  <SandBox installer="ZIP">
+    <Package>
+     <File>file:&mdir;/asymmetryVsEta_9bin.C</File>    
+    </Package>
+  </SandBox>
+
+
+
+  <input URL="file:/star/u/pokhrel/GPFS/IFF_TREES/StartLessTOF/iffNtuplesFinal.root"/> 
+  <stdout URL="file:&rdir;/Eta/asymVsEta.out"/>
+  <stdout URL="file:&rdir;/Eta/asymVsEta.log"/>
+  <stderr URL="file:&rdir;/Eta/asymVsEta.err" />
+
+  <output fromScratch="*.root" toURL="file:&rdir;/Eta/"/>
+  <output fromScratch="*.png" toURL="file:&rdir;/Eta/"/>
+  <output fromScratch="*.pdf" toURL="file:&rdir;/Eta/"/>
+  <output fromScratch="*.txt" toURL="file:&rdir;/Eta/"/>
+
+  <Generator>
+    <Location>&jdir;/</Location>
+    <ReportLocation>&jdir;/</ReportLocation>
+  </Generator>
+</job>

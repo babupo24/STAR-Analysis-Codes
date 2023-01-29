@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE note [
+<!ENTITY mdir "/star/u/pokhrel/IFF_Work/runIFFfinal/macros/TofOnly">
+<!ENTITY sdir "/star/u/pokhrel/IFF_Work/runIFFfinal/submit">
+<!ENTITY rdir "/star/u/pokhrel/IFF_Work/runIFFfinal/Results/TofOnly">
+<!ENTITY jdir "/star/u/pokhrel/SCRATCH/subFiles">
+]>
+
+
+<job maxFilesPerProcess="1" filesPerHour="1" fileListSyntax="paths" simulateSubmission="false">
+
+
+  <command>
+    	starver SL16d
+	root4star -q -b integratedBkgAsym_Minv_5bins.C\(\"$INPUTFILE0\"\) 
+  </command> 
+
+  <SandBox installer="ZIP">
+    <Package>
+     <File>file:&mdir;/integratedBkgAsym_Minv_5bins.C</File>    
+    </Package>
+  </SandBox>
+
+
+
+  <input URL="file:/star/u/pokhrel/GPFS/IFF_TREES/StartLessTOF/iffNtuplesFinal.root"/> 
+  <stdout URL="file:&rdir;/intMinvBkg/asymVsintMinv.out"/>
+  <stdout URL="file:&rdir;/intMinvBkg/asymVsintMinv.log"/>
+  <stderr URL="file:&rdir;/intMinvBkg/asymVsintMinv.err" />
+
+  <output fromScratch="*.root" toURL="file:&rdir;/intMinvBkg/"/>
+  <output fromScratch="*.png" toURL="file:&rdir;/intMinvBkg/"/>
+  <output fromScratch="*.pdf" toURL="file:&rdir;/intMinvBkg/"/>
+  <output fromScratch="*.txt" toURL="file:&rdir;/intMinvBkg/"/>
+
+  <Generator>
+    <Location>&jdir;/</Location>
+    <ReportLocation>&jdir;/</ReportLocation>
+  </Generator>
+</job>
