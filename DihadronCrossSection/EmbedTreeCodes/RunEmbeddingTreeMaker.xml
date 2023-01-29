@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<job maxFilesPerProcess="1" filesPerHour="0.5" fileListSyntax="xrootd" simulateSubmission="false">
+  <command>
+    unsetenv NODEBUG
+    <!-- avtivate optimized version of the compiled code-->
+    starver SL12d_embed
+    @ nFiles=0
+    while ( $nFiles &lt; $INPUTFILECOUNT )
+    eval set mudst = '$INPUTFILE'$nFiles
+    <!-- root4star -q -b RunEmbeddingTreeMaker.C\(1e6,\"$mudst\",\"&runDir;$FILEBASENAME.pythia.root\",\"$FILEBASENAME$nFiles.root\"\) -->
+    root4star -q -b RunEmbeddingTreeMaker.C\(1e6,\"$mudst\",\"&runDir;$FILEBASENAME.pythia.root\",\"$JOBID\_&ptBin;.root\"\)
+    @ nFiles++
+    end
+  </command>
+
+  <SandBox>
+    <Package>
+      <File>file:&wDir;/RunEmbeddingTreeMaker.C</File>
+      <File>file:&wDir;/.sl73_gcc485</File>
+      <File>file:&wDir;/StRoot/*/*</File>
+
+    </Package>
+  </SandBox>
+
+  <input URL="file:&runDir;*.MuDst.root" />
+
+  <!-- <stdout URL="file:&oDir;$FILEBASENAME$nFiles.out" /> -->
+  <stdout URL="file:&oDir;$JOBID.out" />
+  <stderr URL="file:&oDir;$JOBID.err" />
+
+  <output fromScratch="*.root" toURL="file:&treeDir;" />
+
+
+  <Generator>
+    <Location>&loDir;</Location>
+    <ReportLocation>&loDir;</ReportLocation>
+  </Generator>
+
+
+</job>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<job name="jobsRun12pp" minFilesPerProcess="1" maxFilesPerProcess="10" filesPerHour="1" fileListSyntax="xrootd" simulateSubmission="false">
+
+  <command>
+    unsetenv NODEBUG
+starver SL21d
+    root4star -q -b Run12ppTreeMaker.C\(1e6,\"$FILELIST\",\"${JOBID}.root\"\)\+\+
+    <!-- root4star -q -b Run12ppTreeMaker.C\(1e6,\"$INPUTFILE0\",\"${FILEBASENAME}.root\"\)\+\+ -->
+  </command>
+  <SandBox installer="ZIP">
+    <Package>
+      <File>file:./Run12ppTreeMaker.C</File> <!-- Required -->
+      <File>file:./StRoot/*/*</File> <!-- Required -->
+      <File>file:./.sl73_gcc485</File> <!-- Required -->
+    </Package>
+  </SandBox>
+
+  <!-- <stdout URL="file:&logdir;/$FILEBASENAME.log" /> -->
+  <stdout URL="file:&logdir;/$JOBID.log" />
+  <!-- <stderr URL="file:&logdir;/$FILEBASENAME.err" /> -->
+  <stderr URL="file:&logdir;/$JOBID.err" />
+  <input URL="catalog:star.bnl.gov?filename~st_physics,trgsetupname=pp200_production_2012,production=P12id,filetype=daq_reco_picodst,runnumber=&runnumber;,storage!=HPSS" nFiles="all" />
+
+  <output fromScratch="*.root" toURL="&scratch;/" />
+
+  <!--Generator>
+    <Location>&logdir;/</Location>
+    <ReportLocation>&logdir;/</ReportLocation>
+  </Generator-->
+
+</job>

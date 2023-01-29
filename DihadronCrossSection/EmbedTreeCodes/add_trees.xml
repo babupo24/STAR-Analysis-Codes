@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<job simulateSubmission="false">
+
+<command>
+<!--hadd -f -k embedTree_pt2_3.root   /star/u/pokhrel/GPFS/Run12EmbedTrees/pt2_3/*.root--> 
+hadd -f -k tree_&run;.root   /star/u/pokhrel/SCRATCH/Run12EmbeddingPerRun/&run;/*.root 
+
+</command>
+
+
+<stdout URL="file:./$JOBID.out" />
+<stderr URL="file:./$JOBID.err" />
+
+
+<!--output fromScratch="*.root" toURL="file:/star/u/pokhrel/GPFS/Run12EmbeddingTrees/NewBatch2/"/-->
+<output fromScratch="*.root" toURL="file:&odir;/"/>
+
+</job>

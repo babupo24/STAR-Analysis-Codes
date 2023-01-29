@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<job simulateSubmission="false">
+
+<command>
+hadd -f -k run12pp200_&run;.root   /star/u/pokhrel/GPFS/Run12PicoTrees2/&run;/*.root 
+
+</command>
+
+
+<stdout URL="file:./$JOBID.out" />
+<stderr URL="file:./$JOBID.err" />
+
+
+<output fromScratch="*.root" toURL="file:/star/u/pokhrel/SCRATCH/Run12PicoTrees/"/>
+
+</job>
