@@ -11,7 +11,6 @@
 #include "StRun12ppTreeMaker.h"
 #include "StRoot/StPicoDstMaker/StPicoDstMaker.h"
 #include "StRoot/StPicoEvent/StPicoBTofPidTraits.h"
-
 #include "TVector3.h"
 #include "TSystem.h"
 // std
@@ -31,9 +30,41 @@
 #include "StChain.h"
 #include "StEvent/StEvent.h"
 
+// StEmc
+#include "StEmcClusterCollection.h"
+#include "StEmcPoint.h"
+#include "StEmcUtil/geometry/StEmcGeom.h"
+#include "StEmcUtil/others/emcDetectorName.h"
+#include "StEmcADCtoEMaker/StBemcData.h"
+#include "StEmcADCtoEMaker/StEmcADCtoEMaker.h"
+#include "StEmcRawMaker/defines.h"
+#include "StEmcRawMaker/StBemcRaw.h"
+#include "StEmcRawMaker/StBemcTables.h"
+#include "StEmcRawMaker/StEmcRawMaker.h"
+#include "StEmcRawMaker/defines.h"
+#include "StEmcUtil/database/StBemcTables.h"
+#include "StEvent/StEmcCollection.h"
+
+#include "StChain.h"
+#include "StMcEventMaker/StMcEventMaker.h"
+#include "StMcEventTypes.hh"
+#include "StMcEvent.hh"
+#include "StEvent/StEvent.h"
+
+#include "TDataSetIter.h"
+
+#include "StEEmcUtil/database/EEmcDbItem.h"
+#include "StEEmcUtil/database/StEEmcDb.h"
+#include "StEEmcUtil/EEmcGeom/EEmcGeomDefs.h"
+#include "StEEmcUtil/EEmcGeom/EEmcGeomSimple.h"
+
+#include "St_DataSet.h"
+#include "St_DataSetIter.h"
+#include "StTriggerUtilities/StTriggerSimuMaker.h"
+
 ClassImp(StRun12ppTreeMaker)
 
-    StRun12ppTreeMaker::StRun12ppTreeMaker(const char *name, const char *outfilename, StPicoDstMaker *picoMaker) : StMaker(name)
+    StRun12ppTreeMaker::StRun12ppTreeMaker(const char *name, const char *outfilename, StPicoDstMaker *picoMaker) : StMaker(name), mBemcTables(0)
 {
   mPicoDstMaker = picoMaker;
   assert(mPicoDstMaker);
@@ -42,6 +73,9 @@ ClassImp(StRun12ppTreeMaker)
   picoDst = 0;
   picoEvent = 0;
   mTrack = 0;
+  mEEmcGeom = new EEmcGeomSimple();
+  if (StEmcADCtoEMaker *adc2e = (StEmcADCtoEMaker *)StMaker::GetChain()->GetMakerInheritsFrom("StEmcADCtoEMaker"))
+    mBemcTables = adc2e->getBemcData()->getTables();
 }
 
 StRun12ppTreeMaker::~StRun12ppTreeMaker()
@@ -50,6 +84,11 @@ StRun12ppTreeMaker::~StRun12ppTreeMaker()
 
 Int_t StRun12ppTreeMaker::Init()
 {
+  mEemcDb = (StEEmcDb *)this->GetDataSet("StEEmcDb");
+  assert(mEemcDb);
+
+  mTrigSimu = dynamic_cast<StTriggerSimuMaker *>(GetMakerInheritsFrom("StTriggerSimuMaker"));
+  assert(mTrigSimu);
 
   pi = TMath::Pi();
 
@@ -62,10 +101,6 @@ Int_t StRun12ppTreeMaker::Init()
   ftree->Branch("frunNum", &frunNum, "frunNum/I");
   ftree->Branch("frefmult", &frefmult, "frefmult/I");
   ftree->Branch("ftrigger", &ftrigger);
-  ftree->Branch("trigJP0", &trigJP0, "trigJP0/I");
-  ftree->Branch("trigJP1", &trigJP1, "trigJP1/I");
-  ftree->Branch("trigJP2", &trigJP2, "trigJP2/I");
-
   ftree->Branch("fmaxpar", &fmaxpar, "fmaxpar/I");
 
   ftree->Branch("fVZ", &fVZ, "fVZ/D");
@@ -115,20 +150,7 @@ Int_t StRun12ppTreeMaker::Make()
   assert(picoEvent);
 
   ftrigger = picoEvent->triggerIds();
-  trigJP0 = 0, trigJP1 = 0, trigJP2 = 0;
-  //cout << "Trigger Size: " << ftrigger.size() << endl;
-  for (unsigned int i = 0; i < ftrigger.size(); i++)
-  {
-    if (ftrigger.at(i) == 370601)
-      trigJP0 = 1;
-    if (ftrigger.at(i) == 370611)
-      trigJP1 = 1;
-    if (ftrigger.at(i) == 370621)
-      trigJP2 = 1;
-
-    cout << "Ids: " << ftrigger.at(i) << endl;
-  }
-
+  ftrigger_simu = mTrigSimu->trigge
   fverRank = picoEvent->ranking();
   TVector3 vertexPos = picoEvent->primaryVertex();
   fVZ = vertexPos.Z();

@@ -2,9 +2,10 @@
 class StMaker;
 class StChain;
 class StPicoDstMaker;
+class StTriggerFilterMaker;
 
-void Run12ppTreeMaker(Int_t nEvents = 1000,
-                      const char *picoFile = "/star/data27/reco/pp200_production_2012/ReversedFullField/P12id.SL21d/2012/041/13041102/st_physics_13041102_raw_4010002.picoDst.root",
+void Run12ppTreeMaker(Int_t nEvents = 100,
+                      const char *picoFile = "/star/data27/reco/pp200_production_2012/ReversedFullField/P12id.SL21d/2012/047/13047042/st_physics_13047042_raw_2010001.picoDst.root",
                       const char *outFile = "testTree.root")
 {
   TDirectory *home = gDirectory;
@@ -16,8 +17,25 @@ void Run12ppTreeMaker(Int_t nEvents = 1000,
   gSystem->Load("StPicoEvent");
   gSystem->Load("StPicoDstMaker");
 
+  gSystem->Load("StDetectorDbMaker");
+  gSystem->Load("StTpcDb");
+  gSystem->Load("StDbUtilities");
+  gSystem->Load("StMcEvent");
+  gSystem->Load("StMcEventMaker");
+  gSystem->Load("StDaqLib");
+  gSystem->Load("StEmcRawMaker");
+  gSystem->Load("StEmcADCtoEMaker");
+  gSystem->Load("StEmcSimulatorMaker");
   gSystem->Load("StDbBroker");
   gSystem->Load("St_db_Maker");
+  gSystem->Load("StEEmcUtil");
+  gSystem->Load("StEEmcDbMaker");
+  gSystem->Load("StSpinDbMaker");
+  gSystem->Load("StEmcTriggerMaker");
+  gSystem->Load("StTriggerUtilities");
+  gSystem->Load("StMCAsymMaker");
+  gSystem->Load("StRandomSelector");
+  gSystem->Load("StJetSkimEvent");
 
   gSystem->Load("StRun12ppTreeMaker");
 
@@ -27,6 +45,18 @@ void Run12ppTreeMaker(Int_t nEvents = 1000,
   StPicoDstMaker *picoDstDb = StPicoDstMaker::instance();
 
   St_db_Maker *mDbMk = new St_db_Maker("StarDb", "MySQL:StarDb"); // connect to the STAR database
+
+  StEEmcDbMaker *eemcDb = new StEEmcDbMaker;
+
+  StEmcADCtoEMaker *adc = new StEmcADCtoEMaker;
+  adc->saveAllStEvent(true);
+
+  StTriggerSimuMaker *simuTrig = new StTriggerSimuMaker;
+  simuTrig->useOnlineDB();
+  simuTrig->setMC(false);
+  simuTrig->useBemc();
+  simuTrig->useEemc();
+  simuTrig->bemc->setConfig(StBemcTriggerSimu::kOnline);
 
   StRun12ppTreeMaker *picoAna = new StRun12ppTreeMaker("StRun12ppTreeMaker", outFile, picoMaker);
   picoAna->setHome(home);

@@ -18,6 +18,8 @@
 #include "StRoot/StPicoEvent/StPicoTrack.h"
 #include "StRoot/StPicoEvent/StPicoBTofPidTraits.h"
 
+#include "StRoot/StTriggerUtilities/StTriggerSimuMaker.h"
+
 class TTree;
 class TFile;
 class TH2F;
@@ -28,6 +30,17 @@ class StPicoEvent;
 class StPicoTrack;
 class StPicoDstMaker;
 class StPicoBTofPidTraits;
+class StTriggerSimuMaker;
+
+class StEventInfo;
+class StEmcCollection;
+class StBemcTables;
+class EEmcGeomSimple;
+class StEEmcDbMaker;
+class StEEmcDb;
+class EEmcDbItem;
+class StPythiaEvent;
+class StTriggerSimuMaker;
 
 class StRun12ppTreeMaker : public StMaker
 {
@@ -37,6 +50,12 @@ private:
   StPicoEvent *picoEvent;
   StPicoTrack *mTrack;
   StPicoBTofPidTraits *trait;
+
+  StBemcTables *mBemcTables;
+  StEEmcDb *mEemcDb;
+  EEmcGeomSimple *mEEmcGeom;
+
+  StTriggerSimuMaker *mTrigSimu;
 
   TFile *mFile;
 
@@ -53,9 +72,7 @@ protected:
   Int_t frunNum;
   Int_t frefmult;
   vector<unsigned int> ftrigger;
-  Int_t trigJP0;
-  Int_t trigJP1;
-  Int_t trigJP2;
+  vector<int> ftrigger_simu;
   Int_t fmaxpar;
   Int_t nPrimTracks;
   Double_t fVZ;
