@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<job minFilesPerProcess="1" maxFilesPerProcess="1" filesPerHour="1" simulateSubmission="false"
+  fileListSyntax="xrootd">
+
+
+  <command>
+    sh getPythiaEventsCount.sh 
+  </command>
+
+  <SandBox installer="ZIP">
+    <Package>
+      <File>file:./getPythiaEventsCount.sh</File> <!-- Required -->
+    </Package>
+  </SandBox>
+
+
+  <stdout
+    URL="file:/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/logFiles/$JOBID.out" />
+  <stderr
+    URL="file:/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/logFiles/$JOBID.err" />
+
+  <output fromScratch="*.txt"
+    toURL="file:/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/EventCounts/" />
+
+  <Generator>
+    <Location>/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/subFiles/</Location>
+    <ReportLocation>/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/subFiles/</ReportLocation>
+  </Generator>
+</job>

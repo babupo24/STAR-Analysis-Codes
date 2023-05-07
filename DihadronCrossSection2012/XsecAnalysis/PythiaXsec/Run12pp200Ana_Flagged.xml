@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<job minFilesPerProcess="1" maxFilesPerProcess="1" filesPerHour="1" simulateSubmission="false"
+  fileListSyntax="xrootd">
+
+
+  <command>
+    unsetenv NODEBUG
+    starver DEV
+    root4star -q -b Run12pp200Ana.C\(\"$INPUTFILE0\"\,\"hist_${FILEBASENAME}.root\"\)
+  </command>
+
+  <SandBox installer="ZIP">
+    <Package>
+      <File>file:./Run12pp200Ana.C</File> <!-- Required -->
+      <File>file:./StRoot/*/*</File> <!-- Required -->
+      <File>file:./.sl73_gcc485</File> <!-- Required -->
+    </Package>
+  </SandBox>
+
+
+  <input
+    URL="filelist:/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/goodtreesv3_flagged.list"/>
+  <stdout
+    URL="file:/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/logFiles/$FILEBASENAME.out" />
+  <stderr
+    URL="file:/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/logFiles/$FILEBASENAME.err" />
+
+  <output fromScratch="*.root"
+    toURL="file:/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/Hist_Flagged/" />
+
+  <Generator>
+    <Location>/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/subFiles/</Location>
+    <ReportLocation>/star/u/pokhrel/DihadronCrossSection/XsecAnalysis/PythiaXsec/subFiles/</ReportLocation>
+  </Generator>
+</job>
