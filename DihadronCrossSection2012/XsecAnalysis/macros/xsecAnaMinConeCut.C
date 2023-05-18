@@ -1,4 +1,8 @@
+#include <helper_functions.h>
+#include "macros/xsec_theory_data.h"
+#include <embed_stat_err.h>
 #include <iostream>
+#include <stdio.h>
 #include "TFile.h"
 #include "TH1.h"
 #include "TGraphErrors.h"
@@ -7,7 +11,6 @@
 #include "TMath.h"
 #include <iomanip>
 #include <cmath>
-#include "helper_functions.h"
 
 using namespace std;
 
@@ -17,8 +20,9 @@ void setBinError(TH1D *hRatio, TH1D *hData, TH1D *hEmbed);
 double getBinError(double dataBinCt, double dataBinErr, double embedBinCt, double embedBinErr);
 
 void drawXsecMoneyPlot(TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err, TH1D *htotal_err, TCanvas *can);
+void xsec_theory_data(TH1D *hTheoryBand, TH1D *hTheoryLine, TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err, TH1D *htotal_err, TCanvas *can);
 
-void drawErrors(TH1D *htotal, TH1D *hsys, TH1D *hpid, TH1D *hloss, TH1D *htrgspr, TH1D *hstat, TH1D *hbias);
+void drawErrors(TH1D *htotal, TH1D *hsys, TH1D *hpid, TH1D *hloss, TH1D *htrgspr, TH1D *hstat, TH1D *hbias, TH1D *hembstat);
 
 void xsecAnaMinConeCut()
 {
@@ -37,6 +41,20 @@ void xsecAnaMinConeCut()
     const int nBinsU = 15;
     Double_t nBinsEdgesU[nBinsU + 1] = {0.05, 0.27, 0.35, 0.45, 0.60, 0.75, 0.95, 1.15, 1.35, 1.60, 1.90, 2.20, 2.60, 3.20, 4.0, 4.25};
 
+    // JAM theory cross-section(unofficial)
+    Double_t xsec_th[13] = {6.96587e+9, 8.11131e+9, 6.57933e+9, 2.06087e+9, 4.94555e+8, 7.37511e+7, 1.54911e+7, 3.51119e+6, 981150, 0, 0, 0, 0}; // central line
+    Double_t xsecErrL_th[13] = {3.02999e+9, 4.24962e+9, 4.0386e+9, 1.32335e+9, 2.45271e+8, 3.28655e+7, 5.49111e+6, 1.24461e+6, 457540, 0, 0, 0, 0};
+    Double_t xsecErrU_th[13] = {2.66069e+9, 4.21716e+9, 3.8086e+9, 1.25549e+9, 2.71566e+8, 3.41579e+7, 5.11754e+6, 1.15993e+6, 427361, 0, 0, 0, 0};
+    Double_t xsec_th_bm[13] = {0};      // band mean
+    Double_t xsec_th_bm_errL[13] = {0}; // band width/error
+    Double_t xsec_th_bm_errU[13] = {0}; // band width/error
+    for (int i = 0; i < 13; i++)
+    {
+        xsec_th_bm[i] = 0.5 * ((xsec_th[i] - xsecErrL_th[i]) + (xsec_th[i] + xsecErrU_th[i]));
+        xsec_th_bm_errU[i] = fabs(xsec_th[i] + (xsecErrU_th[i] - xsec_th_bm[i])); // from upper band limit
+        xsec_th_bm_errL[i] = fabs(xsec_th_bm[i] - (xsec_th[i] - xsecErrL_th[i])); // from lower band limit (both should be same!)
+    }
+
     // trigger prescales
     Double_t presjp0 = 0.00707; //(1. / 141.276);
     Double_t presjp1 = 0.3892;  //(1. / 2.56938);
@@ -47,30 +65,49 @@ void xsecAnaMinConeCut()
     double partPtRange[nBins + 1] = {2., 3., 4., 5., 7., 9., 11., 15., 20., 25., 35., 45., 55., -1};
 
     Double_t crossSection[nBins] = {9.0012e+00, 1.46253e+00, 3.54466e-01, 1.51622e-01, 2.49062e-02, 5.84527e-03, 2.30158e-03, 3.42755e-04, 4.57002e-05, 9.72535e-06, 4.69889e-07, 2.69202e-08, 1.43453e-09}; // in mb
-
+    Double_t crossSectionStatError[13] = {0.189779, 0.0339451, 0.00867607, 0.00354122, 0.000575684, 0.000136599, 5.51271e-05, 8.14065e-06, 1.09002e-06, 2.7468e-07, 1.21204e-08, 7.09449e-10, 3.98256e-11};  // in mb
     // TFile *frawX = new TFile("PythiaXsec/pythiaXsec.root", "R"); // good embed runs
     TFile *frawX = new TFile("PythiaXsec/pythiaXsecAll.root", "R"); // all embed runs
 
     // get raw cross section in wach pt bins
-    TH1D *hrawX[13];
-    TH1D *hevProcess[13];
+    const TH1D *hrawX[13];
+    TH1D *hrawXc[13]; // copy
+    const TH1D *hevProcess[13];
     double lum[13] = {0};
+    double lumError[13] = {0};
     double evProcessed[13] = {0};
     for (int i = 0; i < 13; i++)
     {
+
         hrawX[i] = (TH1D *)frawX->Get(Form("hpythiaMinv_%g_%g", partPtRange[i], partPtRange[i + 1]));
+        hrawXc[i] = (TH1D *)hrawX[i]->Clone();
         hevProcess[i] = (TH1D *)frawX->Get(Form("hevProcessed_%g_%g", partPtRange[i], partPtRange[i + 1]));
         evProcessed[i] = hevProcess[i]->Integral();
-        cout << evProcessed[i] << ",";
         lum[i] = evProcessed[i] / (crossSection[i] * 1e9); // cross-section in pb
-        hrawX[i]->Scale(1. / lum[i]);
-    }
-    cout << endl;
+        lumError[i] = lum[i] * sqrt(pow(sqrt(evProcessed[i]) / evProcessed[i], 2) + pow(crossSectionStatError[i] / crossSection[i], 2));
+        hrawXc[i]->Scale(1. / lum[i]); // pythia cross-section (not normalized by the bin width )
 
-    TH1D *hpythiaXsec = (TH1D *)hrawX[0]->Clone();
+        // error propagation for the pythia cross-ection.
+        for (int j = 1; j <= hrawX[i]->GetNbinsX(); j++)
+        {
+            if (hrawX[i]->GetBinContent(j) == 0)
+            {
+                // cout << "ERROR::Empty cross-section bin " << j << endl;
+                continue;
+            }
+            double binErr = hrawX[i]->GetBinError(j);
+            double xbinErr = (hrawX[i]->GetBinContent(j) / lum[i]) * sqrt(pow(binErr / hrawX[i]->GetBinContent(j), 2) + pow(lumError[i] / lum[i], 2));
+            hrawXc[i]->SetBinError(j, xbinErr);
+
+            // cout << binErr << "  " << xbinErr << endl;
+            // cout << " " << hrawXc[i]->GetBinContent(j) << "  " << hrawXc[i]->GetBinError(j);
+        }
+    }
+
+    TH1D *hpythiaXsec = (TH1D *)hrawXc[0]->Clone();
     for (int i = 1; i < 13; i++)
     {
-        hpythiaXsec->Add(hrawX[i]);
+        hpythiaXsec->Add(hrawXc[i]);
     }
     TH1D *hpythiaXsecW = (TH1D *)hpythiaXsec->Clone();
     hpythiaXsecW->Reset();
@@ -113,15 +150,17 @@ void xsecAnaMinConeCut()
     double trkefferr_jp2[13] = {7.47627e-07, 5.25193e-07, 4.69177e-07, 5.99939e-07, 6.99555e-07, 1.08637e-06, 1.58333e-06, 2.12297e-06, 3.23232e-06, 5.37244e-06, 8.66935e-06, 1.81999e-05, 5.42626e-05};
 
     // dipion triggering efficiency
+
     // jp0 efficiency and error
-    Double_t eff_trg_jp0[13] = {0.0647609, 0.0663649, 0.0734078, 0.0840551, 0.109116, 0.150331, 0.197242, 0.261445, 0.408169, 0.447309, 0.501666, 0.668775, 0.759649};
-    Double_t efferr_trg_jp0[13] = {0.000446209, 0.000330274, 0.000310635, 0.000505293, 0.000819134, 0.00188765, 0.00383486, 0.00661998, 0.00748233, 0.0149041, 0.0275889, 0.0519418, 0.0985095};
+    Double_t eff_trg_jp0[13] = {0.06218, 0.0635835, 0.0666106, 0.0842533, 0.115018, 0.162886, 0.227979, 0.318971, 0.500256, 0.5584, 0.638504, 0.760584, 0.901282};
+    Double_t efferr_trg_jp0[13] = {0.000358476, 0.000264799, 0.000237964, 0.000419787, 0.000761594, 0.00177198, 0.00397223, 0.00726696, 0.00820762, 0.0168248, 0.0306366, 0.052663, 0.103569};
     // jp1 efficiency and error
-    Double_t eff_trg_jp1[13] = {0.00762761, 0.00806872, 0.00943897, 0.0127224, 0.0203221, 0.0349688, 0.0512922, 0.0836607, 0.162998, 0.195088, 0.246034, 0.425724, 0.533614};
-    Double_t efferr_trg_jp1[13] = {8.31865e-05, 6.43366e-05, 6.41374e-05, 0.000102156, 0.000170519, 0.00041934, 0.00085, 0.00192461, 0.00316734, 0.00682422, 0.0121178, 0.0320969, 0.0574833};
+    Double_t eff_trg_jp1[13] = {0.00731371, 0.00773927, 0.00830041, 0.0123315, 0.0206927, 0.0372235, 0.0600657, 0.103605, 0.211771, 0.257325, 0.347275, 0.507202, 0.641553};
+    Double_t efferr_trg_jp1[13] = {7.22544e-05, 5.52032e-05, 4.79204e-05, 8.71347e-05, 0.000165822, 0.000433534, 0.000934156, 0.00208306, 0.00359666, 0.00750071, 0.0155309, 0.0346532, 0.0605443};
     // jp2 efficiency and error
-    Double_t eff_trg_jp2[13] = {0.00151809, 0.00163691, 0.0019597, 0.0029936, 0.00543582, 0.0104283, 0.0176766, 0.0307442, 0.0640216, 0.0869714, 0.119685, 0.258225, 0.361955};
-    Double_t efferr_trg_jp2[13] = {2.11924e-05, 1.42757e-05, 1.59223e-05, 1.75488e-05, 3.76751e-05, 0.000108269, 0.000299922, 0.00065822, 0.00114225, 0.00334942, 0.00557087, 0.0197869, 0.0413919};
+    Double_t eff_trg_jp2[13] = {0.00138597, 0.00151376, 0.00168918, 0.00276861, 0.0054136, 0.010864, 0.0205764, 0.0396581, 0.0873528, 0.121622, 0.174098, 0.300651, 0.438564};
+    Double_t efferr_trg_jp2[13] = {1.70826e-05, 1.3147e-05, 1.11464e-05, 1.6876e-05, 5.42097e-05, 9.61059e-05, 0.000298852, 0.000770725, 0.00137986, 0.00379984, 0.00705385, 0.0203718, 0.0420877};
+
     // trigger  bias
     double sys_trigBias[13] = {0.0217904, 0.020958, 0.0230904, 0.0138005, 0.00169444, 0.00280884, 0.00213932, 0.00525629, 0.0149015, 0.0155368, 0.0102302, 0.00550931, 0.033424};
 
@@ -134,38 +173,6 @@ void xsecAnaMinConeCut()
     double fraction_missedjp2[13] = {1.38673, 1.39851, 1.3703, 1.35543, 1.33698, 1.32011, 1.30906, 1.29129, 1.29228, 1.29154, 1.31678, 1.2389, 1.25844};
     double fraction_missedjp1[13] = {1.38834, 1.3936, 1.38832, 1.3708, 1.33332, 1.33016, 1.32992, 1.31654, 1.29919, 1.29851, 1.26968, 1.2463, 1.28287};
     double fraction_missedjp0[13] = {1.40607, 1.40268, 1.39037, 1.37083, 1.33549, 1.31754, 1.30873, 1.29688, 1.29907, 1.27603, 1.2869, 1.25255, 1.27453};
-
-    // systematic error froam the data-embedding mismatch
-    TFile *fdat = new TFile("histData.root", "R");
-    TH1D *hdat_jp0 = (TH1D *)fdat->Get("hxsecMJP0");
-    TH1D *hdat_jp1 = (TH1D *)fdat->Get("hxsecMJP1");
-    TH1D *hdat_jp2 = (TH1D *)fdat->Get("hxsecMJP2");
-    TH1D *hdat = (TH1D *)hdat_jp0->Clone();
-    hdat->SetName("hdatComb");
-    hdat->Add(hdat_jp1);
-    hdat->Add(hdat_jp2);
-    hdat->Scale(1. / hdat->Integral());
-
-    TFile *femb = new TFile("histEmbedv3.root", "R");
-    TH1D *hemb_jp0 = (TH1D *)femb->Get("hxsecMJP0");
-    TH1D *hemb_jp1 = (TH1D *)femb->Get("hxsecMJP1");
-    TH1D *hemb_jp2 = (TH1D *)femb->Get("hxsecMJP2");
-    TH1D *hemb = (TH1D *)hemb_jp2->Clone();
-    hemb->SetName("hembComb");
-    hemb->Add(hemb_jp1, presjp1);
-    hemb->Add(hemb_jp0, presjp0);
-    hemb->Scale(1. / hemb->Integral());
-
-    TH1D *hdatemb_sys = (TH1D *)hemb->Clone();
-    hdatemb_sys->Add(hdat, -1);
-    hdatemb_sys->Divide(hdat);
-    double sys_datemb[13] = {0};
-    for (int i = 1; i <= hdatemb_sys->GetNbinsX(); i++)
-    {
-        sys_datemb[i - 1] = fabs(hdatemb_sys->GetBinContent(i));
-        // cout << sys_datemb[i - 1] << ",";
-    }
-    // cout << endl;
 
     // cross-section factor
     Double_t binWidth[13] = {0};
@@ -180,6 +187,22 @@ void xsecAnaMinConeCut()
         f_jp1[i] = (Double_t)((fraction_truejp1[i] * fraction_missedjp1[i]) / (binWidth[i] * trkeff_jp1[i] * eff_trg_jp1[i] * L_jp1));
         f_jp2[i] = (Double_t)((fraction_truejp2[i] * fraction_missedjp2[i]) / (binWidth[i] * trkeff_jp2[i] * eff_trg_jp2[i] * L_jp2));
     }
+    double sys_embed_stat_jp0[13] = {25256.4, 32968.1, 35356.9, 20818.6, 12656.8, 8189.79, 3723.09, 1082.77, 274.524, 118.704, 63.2678, 54.3014, 18.8248};
+    double sys_embed_stat_jp1[13] = {244487, 244899, 350509, 241674, 198468, 87652.6, 40399.3, 13258.1, 4045.52, 2486.82, 1425.33, 414.361, 195.308};
+    double sys_embed_stat_jp2[13] = {138814, 190949, 240767, 129879, 115738, 43055.2, 15278.8, 7628.96, 3059.86, 3369.94, 1031.04, 894.735, 267.653};
+
+    // systematic error frm embedding sample statistics
+    double sys_embstat_jp0[13] = {0};
+    double sys_embstat_jp1[13] = {0};
+    double sys_embstat_jp2[13] = {0};
+    for (int i = 0; i < 13; i++)
+    {
+        sys_embstat_jp0[i] = f_jp0[i] * sys_embed_stat_jp0[i]; // values form the header file
+        sys_embstat_jp1[i] = f_jp1[i] * sys_embed_stat_jp1[i];
+        sys_embstat_jp2[i] = f_jp2[i] * sys_embed_stat_jp2[i];
+        // cout << i << " " << sys_embstat_jp0[i] << "  " << sys_embstat_jp1[i] << "  " << sys_embstat_jp2[i] << endl;
+    }
+
     // yields per bin (dN)
     Double_t dN_jp0[nBins] = {0};            // unfolded dipion raw yields
     Double_t stat_err_jp0[nBins] = {0};      // stat error from unfolding
@@ -206,7 +229,9 @@ void xsecAnaMinConeCut()
     Double_t xsec_jp[nBins] = {0};
     // systematic error from trigger spread
     Double_t sys_trg_err[13] = {0};
-    double sys_loss_jp[13] = {0};
+    Double_t sys_loss_jp[13] = {0};
+    Double_t sys_embstat_jpW[13] = {0}; // weighted error
+    Double_t sys_embstat_jp[13] = {0};  // weighted scaled by the cross-section(for drawing)
     // systematic errors for combinatorial background correction
     // f_fake  and f_loss systematic uncertainties
 
@@ -298,12 +323,12 @@ void xsecAnaMinConeCut()
         double spr_jp0 = fabs(xsec_jp[i] - xsec_jp0[i]) / xsec_jp[i];
         double spr_jp1 = fabs(xsec_jp[i] - xsec_jp1[i]) / xsec_jp[i];
         double spr_jp2 = fabs(xsec_jp[i] - xsec_jp2[i]) / xsec_jp[i];
+
         if (i >= 10)
         {
-            spr_jp0 = 0.03;
-            spr_jp1 = 0.02;
-            spr_jp2 = 0.01;
+            spr_jp0 = (1 / 3) * (1 / xsec_jp[i]) * (3 * xsec_jp[i] - xsec_jp0[i] - xsec_jp1[i] - xsec_jp2[i]);
         }
+
         // sys_trg_err[i] = (w2_jp0 * spr_jp0 + w2_jp1 * spr_jp1 + w2_jp2 * spr_jp2) / (w2_jp0 + w2_jp1 + w2_jp2); // weighted average
 
         sys_trg_err[i] = TMath::Max(spr_jp0, TMath::Max(spr_jp1, spr_jp2)); // max offsed of all three triggers is assigned as systematic error
@@ -312,14 +337,17 @@ void xsecAnaMinConeCut()
 
         sys_loss_jp[i] = (w2_jp0 * sys_loss_jp0[i] + w2_jp1 * sys_loss_jp1[i] + w2_jp2 * sys_loss_jp0[i]) / ((w2_jp0 + w2_jp1 + w2_jp2));
 
-        // total systematic error
-        sys_err[i] = sqrt(pow(sys_trigBias[i], 2) + pow(sys_trg_err[i], 2) + pow(sys_pid_err[i], 2) + pow(sys_loss_jp[i], 2));
+        sys_embstat_jpW[i] = (w2_jp0 * sys_embstat_jp0[i] + w2_jp1 * sys_embstat_jp1[i] + w2_jp2 * sys_embstat_jp2[i]) / ((w2_jp0 + w2_jp1 + w2_jp2));
+
+        sys_embstat_jp[i] = sys_embstat_jpW[i] / xsec_jp[i];
+        //  total systematic error
+        sys_err[i] = sqrt(pow(sys_trigBias[i], 2) + pow(sys_trg_err[i], 2) + pow(sys_pid_err[i], 2) + pow(sys_loss_jp[i], 2) + pow(sys_embstat_jp[i], 2));
 
         // systematic errors
         if (i == 0)
-            fsyserr << "% 1. Bin No. 2. trigeff 3. f_fake 4. f_loss 5. trigger bias  6. sys_total" << endl;
+            fsyserr << "% 1. Bin No. 2. trigeff 3. f_fake 4. f_loss 5. trigger bias 6. embed stat. 6. sys_total" << endl;
 
-        fsyserr << i << "&" << setprecision(3) << sys_trg_err[i] << "&" << setprecision(3) << sys_pid_err[i] << "&" << setprecision(3) << sys_loss_jp[i] << "&" << setprecision(3) << sys_trigBias[i] << "&" << setprecision(3) << sys_err[i] << "\\\\" << endl;
+        fsyserr << i << "&" << setprecision(3) << sys_trg_err[i] << "&" << setprecision(3) << sys_pid_err[i] << "&" << setprecision(3) << sys_loss_jp[i] << "&" << setprecision(3) << sys_trigBias[i] << setprecision(3) << "&" << sys_embstat_jp[i] << "&" << setprecision(3) << sys_err[i] << "\\\\" << endl;
 
         // jp0 numbers
         if (i == 0)
@@ -340,6 +368,11 @@ void xsecAnaMinConeCut()
         // total cross section
         fxsec << nBinsEdges[i] << "-" << nBinsEdges[i + 1] << "&" << setprecision(3) << xsec_jp[i] << "&" << setprecision(3) << xsec_stat_err_jp[i] << "&" << setprecision(3) << xsec_pyth[i] << "&" << setprecision(3) << stat_err_pyth[i] << "&" << setprecision(3) << sys_err[i] << "\\\\" << endl;
     }
+    fsyserr << "\\hline\\hline" << endl;
+    fxsec0 << "\\hline\\hline" << endl;
+    fxsec1 << "\\hline\\hline" << endl;
+    fxsec2 << "\\hline\\hline" << endl;
+    fxsec << "\\hline\\hline" << endl;
 
     // book histograms for money plot
     TH1D *hxsec_jp0 = new TH1D("hxsec_jp0", "", nBinsU, nBinsEdgesU);
@@ -347,6 +380,8 @@ void xsecAnaMinConeCut()
     TH1D *hxsec_jp2 = new TH1D("hxsec_jp2", "", nBinsU, nBinsEdgesU);
     TH1D *hxsec_pyth = new TH1D("hxsec_pyth", "", nBinsU, nBinsEdgesU);
     TH1D *hxsec_comb = new TH1D("hxsec_comb", "", nBinsU, nBinsEdgesU);
+    TH1D *hxsec_th_line = new TH1D("hxsec_th_line", "", nBinsU, nBinsEdgesU);
+    TH1D *hxsec_th_band = new TH1D("hxsec_th_band", "", nBinsU, nBinsEdgesU);
 
     // for systematic error
     TH1D *htrg_spr_err = new TH1D("htrg_spr_err", "", nBinsU, nBinsEdgesU); // trig spread and efficiencies
@@ -354,9 +389,10 @@ void xsecAnaMinConeCut()
     TH1D *hloss_err = new TH1D("hloss_err", "", nBinsU, nBinsEdgesU);       // efficiencies error
     TH1D *hbias_err = new TH1D("hbias_err", "", nBinsU, nBinsEdgesU);       // efficiencies error
     // TH1D *hdatemb_err = new TH1D("hdatemb_err", "", nBinsU, nBinsEdgesU);   // efficiencies error
-    TH1D *hsys_err = new TH1D("hsys_err", "", nBinsU, nBinsEdgesU);     // tota systematic error
-    TH1D *hstat_err = new TH1D("hstat_err", "", nBinsU, nBinsEdgesU);   // xsec statistical error
-    TH1D *htotal_err = new TH1D("htotal_err", "", nBinsU, nBinsEdgesU); // stat + sys combined
+    TH1D *hsys_err = new TH1D("hsys_err", "", nBinsU, nBinsEdgesU);         // tota systematic error
+    TH1D *hstat_err = new TH1D("hstat_err", "", nBinsU, nBinsEdgesU);       // xsec statistical error
+    TH1D *hembstat_err = new TH1D("hembstat_err", "", nBinsU, nBinsEdgesU); // xsec statistical error
+    TH1D *htotal_err = new TH1D("htotal_err", "", nBinsU, nBinsEdgesU);     // stat + sys combined
 
     for (int i = 0; i < nBinsU; i++)
     {
@@ -381,6 +417,12 @@ void xsecAnaMinConeCut()
         hxsec_pyth->SetBinContent(i + 1, xsec_pyth[i - 1]);
         hxsec_pyth->SetBinError(i + 1, stat_err_pyth[i - 1]);
 
+        hxsec_th_line->SetBinContent(i + 1, xsec_th[i - 1]);
+        hxsec_th_line->SetBinError(i + 1, 0.0);
+
+        hxsec_th_band->SetBinContent(i + 1, xsec_th_bm[i - 1]);
+        hxsec_th_band->SetBinError(i + 1, xsec_th_bm_errU[i - 1]);
+
         // fill error histograms
         hpid_err->SetBinContent(i + 1, 0.0);
         hpid_err->SetBinError(i + 1, sys_pid_err[i - 1]);
@@ -394,14 +436,14 @@ void xsecAnaMinConeCut()
         htrg_spr_err->SetBinContent(i + 1, 0.0);
         htrg_spr_err->SetBinError(i + 1, sys_trg_err[i - 1]);
 
-        // hdatemb_err->SetBinContent(i + 1, 0.0);
-        // hdatemb_err->SetBinError(i + 1, sys_datemb[i - 1]);
+        hstat_err->SetBinContent(i + 1, 0.0);
+        hstat_err->SetBinError(i + 1, norm_stat_err[i - 1]);
+
+        hembstat_err->SetBinContent(i + 1, 0.0);
+        hembstat_err->SetBinError(i + 1, sys_embstat_jp[i - 1]);
 
         hsys_err->SetBinContent(i + 1, 0.0);
         hsys_err->SetBinError(i + 1, sys_err[i - 1]);
-
-        hstat_err->SetBinContent(i + 1, 0.0);
-        hstat_err->SetBinError(i + 1, norm_stat_err[i - 1]);
 
         htotal_err->SetBinContent(i + 1, 0.0);
         htotal_err->SetBinError(i + 1, sqrt(pow(norm_stat_err[i - 1], 2) + pow(sys_err[i - 1], 2)));
@@ -411,8 +453,7 @@ void xsecAnaMinConeCut()
     trigEff(hxsec_comb, hxsec_jp0, hxsec_jp1, hxsec_jp2);
 
     // draw money plot
-
-    TCanvas *cmpt = new TCanvas("cmpt", "", 0, 0, 700, 800);
+    TCanvas *cmpt = new TCanvas("cmpt", "", 0, 0, 750, 800);
     drawXsecMoneyPlot(hxsec_comb, hxsec_pyth, hsys_err, hstat_err, htotal_err, cmpt);
 
     cmpt->SaveAs("ResultsMinConeCut/xsec_MoneyPlot.pdf");
@@ -422,7 +463,7 @@ void xsecAnaMinConeCut()
 
     drawXsec(hxsec_comb, hxsec_pyth, hxsec_jp2, hxsec_jp1, hxsec_jp0);
 
-    drawErrors(htotal_err, hsys_err, hpid_err, hloss_err, htrg_spr_err, hstat_err, hbias_err);
+    drawErrors(htotal_err, hsys_err, hpid_err, hloss_err, htrg_spr_err, hstat_err, hbias_err, hembstat_err);
 
     fxout->cd();
     hxsec_comb->Write();
@@ -430,8 +471,6 @@ void xsecAnaMinConeCut()
     hxsec_jp1->Write();
     hxsec_jp2->Write();
     hxsec_pyth->Write();
-    hdat->Write();
-    hemb->Write();
 
     //----
 
@@ -451,7 +490,7 @@ void drawXsec(TH1D *hcom, TH1D *hpyth, TH1D *hjp2, TH1D *hjp1, TH1D *hjp0)
     gPad->SetLogy();
 
     hjp0->GetXaxis()->SetLabelSize(0);
-    hjp0->GetYaxis()->SetTitle("#font[22]{#frac{d#sigma^{#pi^{+}#pi^{-}}}{dM^{#pi^{+}#pi^{-}}}(= #frac{f_{fake}*f_{loss}}{L #upoint  #epsilon_{trk}^{#pi^{+}} #upoint #epsilon_{trk}^{#pi^{-}} #upoint #epsilon_{trg}^{#pi^{+}#pi^{-}}} #times #frac{dN^{#pi^{+}#pi^{-}}_{true}}{dM_{inv}^{#pi^{+}#pi^{-}}})}");
+    hjp0->GetYaxis()->SetTitle("#font[22]{#frac{d#sigma^{#pi^{+}#pi^{-}}}{dM^{#pi^{+}#pi^{-}}}(= #frac{f_{fake}*f_{loss}}{L #upoint  #epsilon_{trk}^{#pi^{+}} #upoint #epsilon_{trk}^{#pi^{-}} #upoint #epsilon_{trg}^{#pi^{+}#pi^{-}}} #times #frac{dN^{#pi^{+}#pi^{-}}_{true}}{dM_{inv}^{#pi^{+}#pi^{-}}})(pb/GeV)}");
     hjp0->GetYaxis()->CenterTitle();
     hjp0->GetYaxis()->SetTitleOffset(1.5);
     hjp0->GetXaxis()->CenterTitle();
@@ -508,7 +547,6 @@ void drawXsec(TH1D *hcom, TH1D *hpyth, TH1D *hjp2, TH1D *hjp1, TH1D *hjp0)
     tex.SetTextSize(0.04);
     tex.DrawLatex(1.3, hjp0->GetMaximum() * 0.3, "#font[22]{p + p #rightarrow #pi^{+}#pi^{-} + X  at #sqrt{s} = 200 GeV }");
     tex.DrawLatex(1.3, hjp0->GetMaximum() * 0.1, "#font[22]{|#eta^{#pi^{+}#pi^{-}}| < 1}");
-
     gPad->Update();
 
     cxsec->cd();
@@ -526,13 +564,13 @@ void drawXsec(TH1D *hcom, TH1D *hpyth, TH1D *hjp2, TH1D *hjp1, TH1D *hjp0)
     h_R2->SetBit(TH1::kNoTitle);
     // setBinError(h_R2, hcom, hjp2);
 
-    h_R2->GetYaxis()->SetTitle("#font[22]{#frac{#sigma_{jp0,1,2} - #sigma_{comb}}{#sigma_{comb}}}");
+    h_R2->GetYaxis()->SetTitle("#font[22]{#frac{d#sigma_{jp0,1,2}/dM - d#sigma_{comb}/dM}{d#sigma_{comb}/dM}}");
     h_R2->GetXaxis()->SetTitle("#font[22]{M^{#pi^{+}#pi^{-}}_{inv} (GeV/c^{2})}");
     h_R2->GetYaxis()->CenterTitle();
     h_R2->GetYaxis()->SetRangeUser(-0.4, 0.4);
     h_R2->GetYaxis()->SetLabelSize(0.11);
-    h_R2->GetYaxis()->SetTitleOffset(0.55);
-    h_R2->GetYaxis()->SetTitleSize(0.11);
+    h_R2->GetYaxis()->SetTitleOffset(0.65);
+    h_R2->GetYaxis()->SetTitleSize(0.08);
     h_R2->GetXaxis()->SetLabelOffset(0.02);
     h_R2->GetXaxis()->SetTitleOffset(1.1);
     h_R2->GetXaxis()->SetTitleSize(0.11);
@@ -586,23 +624,32 @@ void drawXsecMoneyPlot(TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err,
     can->cd();
     TPad *pad1 = new TPad("pad1", "", 0.0, 0.3, 1.0, 1.0);
     pad1->SetLeftMargin(0.15);
-    pad1->SetBottomMargin(0.02);
+    pad1->SetRightMargin(0.15);
+    pad1->SetBottomMargin(0.0);
     pad1->Draw();
     pad1->cd();
+    pad1->SetLogy();
     gPad->SetGrid(0, 0);
-    gPad->SetLogy();
 
     hpyth->GetXaxis()->SetLabelSize(0);
     hpyth->GetYaxis()->SetTitle("#font[22]{#frac{d#sigma^{#pi^{+}#pi^{-}}}{dM^{#pi^{+}#pi^{-}}}  (#frac{pb}{GeV})}");
     hpyth->GetYaxis()->CenterTitle();
+    hpyth->GetYaxis()->SetTickLength(0.02);
     hpyth->GetYaxis()->SetTitleOffset(1.5);
     hpyth->GetXaxis()->CenterTitle();
+
+    TAxis *yAxisP = hpyth->GetYaxis();
+    yAxisP->SetLabelFont(22);
+
     hpyth->SetMaximum(5e10);
     hpyth->SetMinimum(10);
+    hpyth->SetMarkerStyle(8);
+    hpyth->SetMarkerColor(1);
     hpyth->SetLineColor(1);
     hpyth->SetLineWidth(2);
     hpyth->SetLineStyle(1);
     hpyth->Draw("E1");
+    pad1->Update();
 
     hcom->SetLineColor(2);
     hcom->SetLineWidth(2);
@@ -610,29 +657,51 @@ void drawXsecMoneyPlot(TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err,
     hcom->SetMarkerColor(2);
     hcom->Draw("SAME E1");
 
-    TLegend *lx = new TLegend(0.45, 0.61, 0.75, 0.65);
-    lx->SetNColumns(2);
-    lx->SetTextSize(0.033);
+    TLegend *lx = new TLegend(0.45, 0.53, 0.7, 0.65);
+    // lx->SetNColumns(2);
+    lx->SetTextSize(0.03);
+    lx->AddEntry(hpyth, "#font[22]{ Pythia 6.4.28 @ Perugia 2012,}", "lep");
+    lx->AddEntry(" ", "#font[22]{ PARP(90)=0.213, CTEQ6 PDFs}", " ");
     lx->AddEntry(hcom, "#font[22]{ Measured}", "lep");
-    lx->AddEntry(hpyth, "#font[22]{ Pythia}", "lep");
     lx->Draw();
 
     TLatex tex;
     tex.SetTextAlign(12);
     tex.SetTextSize(0.045);
-    tex.DrawLatex(1.3, hpyth->GetMaximum() * 0.42, "#font[22]{#color[2]{STAR Preliminary 2012}}");
+    tex.DrawLatex(1.3, hpyth->GetMaximum() * 0.32, "#font[22]{#color[2]{STAR Preliminary 2012}}");
     tex.SetTextSize(0.033);
     tex.DrawLatex(1.3, hpyth->GetMaximum() * 0.07, "#font[22]{p + p #rightarrow #pi^{+}#pi^{-} + X  at #sqrt{s} = 200 GeV }");
     tex.DrawLatex(1.3, hpyth->GetMaximum() * 0.02, "#font[22]{|#eta^{#pi^{+}#pi^{-}}| < 1, 1 < p_{T}^{#pi^{+}#pi^{-}} < 15 (GeV/c), 0.02 < cone < 0.7}");
     tex.DrawLatex(1.3, hpyth->GetMaximum() * 0.006, "#font[22]{0.27 < M_{inv}^{#pi^{+}#pi^{-}} < 4.0 (GeV/c^{2}),  L_{int} = 26 (pb)^{-1} }");
 
-    gPad->Update();
+    TPad *pad1clear = new TPad("pad1clear", "", 0.0, 0.0, 1.0, 1.0);
+    pad1clear->SetLeftMargin(0.15);
+    pad1clear->SetRightMargin(0.15);
+    pad1clear->SetBottomMargin(0);
+    pad1clear->SetFillColor(0);
+    pad1clear->SetFillStyle(4000);
+    pad1clear->SetFrameFillStyle(0);
+    pad1clear->SetGrid(0, 0);
+    pad1clear->Draw();
+    pad1clear->cd();
+    pad1clear->SetLogy();
+    TH1D *hcom_c = (TH1D *)hcom->Clone();
+    hcom_c->SetMaximum(5e10);
+    hcom_c->SetMinimum(10);
+    hcom_c->GetXaxis()->SetTitle("");
+    hcom_c->GetXaxis()->SetLabelSize(0);
+    hcom_c->GetYaxis()->SetTitle("");
+    hcom_c->GetYaxis()->SetLabelSize(0);
+    hcom_c->GetYaxis()->SetTickLength(0.02);
+    hcom_c->Draw(" X+ Y+");
+    pad1clear->Update();
 
     can->cd();
     TPad *pad2 = new TPad("pad2", "", 0, 0.05, 1.0, 0.3);
     pad2->SetTopMargin(0);
     pad2->SetBottomMargin(0.25);
     pad2->SetLeftMargin(0.15);
+    pad2->SetRightMargin(0.15);
     pad2->Draw();
     pad2->cd();
     pad2->SetGrid(0, 0);
@@ -642,15 +711,21 @@ void drawXsecMoneyPlot(TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err,
     hsys_err->GetYaxis()->SetRangeUser(-0.6, 0.6);
     hsys_err->GetYaxis()->SetLabelSize(0.11);
     hsys_err->GetYaxis()->SetTitleOffset(0.55);
-    hsys_err->GetYaxis()->SetTitle("#font[22]{#frac{#sigma_{pyth} - #sigma_{mes}}{#sigma_{mes}}}");
+    // hsys_err->GetYaxis()->SetTitle("#font[22]{#frac{#sigma_{pyth} - #sigma_{mes}}{#sigma_{mes}}}");
+    hsys_err->GetYaxis()->SetTitle("#font[22]{(#frac{#delta#sigma}{#sigma})_{mes}}");
     hsys_err->GetYaxis()->SetTitleSize(0.11);
     hsys_err->GetXaxis()->SetLabelOffset(0.02);
+    TAxis *xAxis = hsys_err->GetXaxis();
+    xAxis->SetLabelFont(22);
+    TAxis *yAxis = hsys_err->GetYaxis();
+    yAxis->SetLabelFont(22);
     hsys_err->GetXaxis()->SetTitle("#font[22]{M_{inv}^{#pi^{+}#pi^{-}} (GeV/c^{2})}");
     hsys_err->GetXaxis()->SetTitleOffset(1.1);
     hsys_err->GetXaxis()->SetTitleSize(0.11);
     hsys_err->GetXaxis()->CenterTitle();
     hsys_err->GetYaxis()->CenterTitle();
     hsys_err->GetXaxis()->SetLabelSize(0.11);
+
     hsys_err->GetXaxis()->SetTickLength(0.08);
     hsys_err->GetYaxis()->SetNdivisions(505);
     hsys_err->SetFillColorAlpha(8, 1.0);
@@ -684,25 +759,38 @@ void drawXsecMoneyPlot(TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err,
     // hrdiff_c->SetMarkerColor(2);
     //  hrdiff_c->SetMarkerStyle(8);
     /// hrdiff_c->SetMarkerSize(0.5);
-    hrdiff_c->SetLineColor(2);
+    hrdiff_c->SetLineColor(1);
     hrdiff_c->SetLineWidth(2);
     hrdiff_c->Draw("e1 SAME");
 
-    TLegend *lg1 = new TLegend(0.18, 0.85, 0.38, 0.95);
+    pad2->Update();
+    TGaxis *axis2 = new TGaxis(pad2->GetUxmax(), pad2->GetUymin(), pad2->GetUxmax(), pad2->GetUymax(), -0.6, 0.6, 505, "+L");
+    axis2->SetTitle("#font[22]{Ratio}");
+    axis2->SetTitleSize(0.11);
+    axis2->SetLabelSize(0.11);
+    axis2->SetTextFont(22);
+    axis2->SetLabelFont(22);
+    axis2->SetLabelOffset(0.01);
+    axis2->SetTitleOffset(0.4);
+    axis2->CenterTitle();
+    axis2->Draw();
+
+    TLegend *lg1 = new TLegend(0.25, 0.85, 0.75, 0.95);
     lg1->SetNColumns(3);
     // lg1->AddEntry(hsys_err, "#font[22]{ #delta#sigma_{sys}}", "f");
-    lg1->AddEntry(hsys_err, "#font[22]{ #delta_{sys}}", "f");
+    lg1->AddEntry(hsys_err, "#font[22]{(#frac{#delta#sigma}{#sigma})_{mes}^{Syst.}}", "f");
     // lg1->AddEntry(hstat_err, "#font[22]{ #delta#sigma_{stat}}", "f");
-    lg1->AddEntry(hstat_err, "#font[22]{ #delta_{stat}}", "f");
+    lg1->AddEntry(hstat_err, "#font[22]{(#frac{#delta#sigma}{#sigma})_{mes}^{Stat.}}", "f");
     // lg1->AddEntry(hrdiff_c, "#font[22]{ #times 0.5}", "lp");
-    lg1->SetTextSize(0.1);
+    lg1->AddEntry(hrdiff_c, "#font[22]{Ratio(= #frac{d#sigma_{pyth} - d#sigma_{mes}}{d#sigma_{mes}})}", "lp");
+    lg1->SetTextSize(0.07);
     lg1->Draw();
     gPad->Update();
 
     TLatex tex1;
     tex1.SetTextSize(0.08);
     // tex1.DrawLatex(0.45, hsys_err->GetMinimum() + 0.25, "#font[12]{10\% luminosity measurement uncertainty not shown.}");
-    tex1.DrawLatex(1.35, 0.4, "#font[22]{10\% luminosity measurement uncertainty not shown.}");
+    tex1.DrawLatex(0.35, -0.48, "#font[22]{10\% luminosity uncertainty not shown.}");
 
     can->Update();
 }
@@ -724,7 +812,7 @@ double getBinError(double dataBinCt, double dataBinErr, double embedBinCt, doubl
 
     return (dataBinCt / embedBinCt) * sqrt(pow(dataBinErr / dataBinCt, 2) + pow(embedBinErr / embedBinCt, 2));
 }
-void drawErrors(TH1D *htotal, TH1D *hsys, TH1D *hpid, TH1D *hloss, TH1D *htrgspr, TH1D *hstat, TH1D *hbias)
+void drawErrors(TH1D *htotal, TH1D *hsys, TH1D *hpid, TH1D *hloss, TH1D *htrgspr, TH1D *hstat, TH1D *hbias, TH1D *hembstat)
 {
     TCanvas *cerr = new TCanvas("cerr", "", 500, 350);
     cerr->cd();
@@ -739,22 +827,13 @@ void drawErrors(TH1D *htotal, TH1D *hsys, TH1D *hpid, TH1D *hloss, TH1D *htrgspr
     hsys->GetYaxis()->SetLabelSize(0.06);
     hsys->GetYaxis()->SetTitle("Uncertainty");
     hsys->GetYaxis()->SetTitleOffset(1.);
-    hsys->GetYaxis()->SetRangeUser(-0.29, 0.29);
+    hsys->GetYaxis()->SetRangeUser(-0.4, 0.4);
     hsys->SetFillColorAlpha(42, 1);
     hsys->Draw("E2");
 
     TLegend *leg = new TLegend(0.2, 0.82, 0.85, 0.87);
-    leg->SetNColumns(6);
-    /*
-        leg->AddEntry(hsys, "#delta_{sys}", "f");
-        leg->Draw();
-        cerr->Update();
-        cerr->SaveAs("ResultsMinConeCut/sys_err_total.pdf");
-        cerr->SaveAs("ResultsMinConeCut/sys_err_total.png");
+    leg->SetNColumns(7);
 
-    hsys->SetLineColor(2);
-    hsys->Draw("E1 SAME");
-    */
     leg->AddEntry(hsys, "#delta_{sys}", "f");
     leg->Draw();
     cerr->Update();
@@ -777,7 +856,7 @@ void drawErrors(TH1D *htotal, TH1D *hsys, TH1D *hpid, TH1D *hloss, TH1D *htrgspr
     leg->Draw();
     cerr->Update();
 
-    hstat->SetFillColorAlpha(2, 1);
+    hstat->SetFillColorAlpha(2, 0.5);
     hstat->Draw("E2 SAME");
     leg->AddEntry(hstat, " #delta_{stat}", "f");
     leg->Draw();
@@ -785,7 +864,15 @@ void drawErrors(TH1D *htotal, TH1D *hsys, TH1D *hpid, TH1D *hloss, TH1D *htrgspr
     cerr->SaveAs("ResultsMinConeCut/sys_err_total_sys_pid_stat.pdf");
     cerr->SaveAs("ResultsMinConeCut/sys_err_total_sys_pid_stat.png");
 
-    htrgspr->SetLineColorAlpha(3, 1);
+    hembstat->SetFillColorAlpha(5, 0.5);
+    hembstat->Draw("E2 SAME");
+    leg->AddEntry(hembstat, " #delta_{embstat}", "f");
+    leg->Draw();
+    cerr->Update();
+    cerr->SaveAs("ResultsMinConeCut/sys_err_total_sys_pid_embstat.pdf");
+    cerr->SaveAs("ResultsMinConeCut/sys_err_total_sys_pid_embstat.png");
+
+    htrgspr->SetLineColor(3);
     htrgspr->SetLineWidth(2);
     htrgspr->Draw("E1 SAME");
     leg->AddEntry(htrgspr, " #delta_{trg}", "lep");
@@ -809,6 +896,189 @@ void drawErrors(TH1D *htotal, TH1D *hsys, TH1D *hpid, TH1D *hloss, TH1D *htrgspr
     cerr->SaveAs("ResultsMinConeCut/sys_err_all.pdf");
     cerr->SaveAs("ResultsMinConeCut/sys_err_all.png");
     delete cerr;
+}
+
+void xsec_theory_data(TH1D *hTheoryBand, TH1D *hTheoryLine, TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err, TH1D *htotal_err, TCanvas *can)
+{
+    can->cd();
+    TPad *pad1 = new TPad("pad1", "", 0.0, 0.3, 1.0, 1.0);
+    pad1->SetLeftMargin(0.15);
+    pad1->SetRightMargin(0.15);
+    pad1->SetBottomMargin(0.0);
+    pad1->Draw();
+    pad1->cd();
+    pad1->SetLogy();
+    gPad->SetGrid(0, 0);
+    // theory band
+    hTheoryBand->GetXaxis()->SetLabelSize(0);
+    hTheoryBand->GetYaxis()->SetTitle("#font[22]{#frac{d#sigma^{#pi^{+}#pi^{-}}}{dM^{#pi^{+}#pi^{-}}}  (#frac{pb}{GeV})}");
+    hTheoryBand->GetYaxis()->CenterTitle();
+    hTheoryBand->GetYaxis()->SetTickLength(0.02);
+    hTheoryBand->GetYaxis()->SetTitleOffset(1.5);
+    hTheoryBand->GetXaxis()->CenterTitle();
+
+    TAxis *yAxisP = hTheoryBand->GetYaxis();
+    yAxisP->SetLabelFont(22);
+
+    hTheoryBand->SetMaximum(5e10);
+    hTheoryBand->SetMinimum(10);
+    hTheoryBand->SetFillColorAlpha(4, 5.0);
+    hTheoryBand->SetFillStyle(3001);
+    hTheoryBand->Draw("E3");
+    // theory line
+    hTheoryLine->SetLineColor(4);
+    hTheoryLine->SetLineWidth(2);
+    // hTheoryLine->Draw("SAME L");
+    //  pythia
+    hpyth->SetMarkerStyle(8);
+    hpyth->SetMarkerColor(1);
+    hpyth->SetLineWidth(2);
+    hpyth->SetLineStyle(1);
+    hpyth->Draw(" SAME E1");
+
+    hcom->SetLineColor(2);
+    hcom->SetLineWidth(2);
+    // hcom->SetMarkerStyle(20);
+    hcom->SetMarkerColor(2);
+    hcom->Draw("SAME E1");
+
+    TPad *pad1clear = new TPad("pad1clear", "", 0.0, 0.0, 1.0, 1.0);
+    pad1clear->SetLeftMargin(0.15);
+    pad1clear->SetRightMargin(0.15);
+    pad1clear->SetBottomMargin(0);
+    pad1clear->SetFillColor(0);
+    pad1clear->SetFillStyle(4000);
+    pad1clear->SetFrameFillStyle(0);
+    pad1clear->SetGrid(0, 0);
+    pad1clear->Draw();
+    pad1clear->cd();
+    pad1clear->SetLogy();
+    TH1D *hcom_c = (TH1D *)hcom->Clone();
+    hcom_c->SetMaximum(5e10);
+    hcom_c->SetMinimum(10);
+    hcom_c->GetXaxis()->SetTitle("");
+    hcom_c->GetXaxis()->SetLabelSize(0);
+    hcom_c->GetYaxis()->SetTitle("");
+    hcom_c->GetYaxis()->SetLabelSize(0);
+    hcom_c->GetYaxis()->SetTickLength(0.02);
+    hcom_c->Draw(" X+ Y+");
+
+    TLegend *lx = new TLegend(0.45, 0.53, 0.7, 0.65);
+    // lx->SetNColumns(2);
+    lx->SetTextSize(0.03);
+    lx->AddEntry(hpyth, "#font[22]{ Pythia 6.4.28 @ Perugia 2012,}", "lep");
+    lx->AddEntry(" ", "#font[22]{ PARP(90)=0.213, CTEQ6 PDFs}", " ");
+    lx->AddEntry(hcom, "#font[22]{ Measured}", "lep");
+    lx->Draw();
+
+    TLatex tex;
+    tex.SetTextAlign(12);
+    tex.SetTextSize(0.045);
+    tex.DrawLatex(1.3, hTheoryBand->GetMaximum() * 0.32, "#font[22]{#color[2]{STAR Preliminary 2012}}");
+    tex.SetTextSize(0.033);
+    tex.DrawLatex(1.3, hTheoryBand->GetMaximum() * 0.07, "#font[22]{p + p #rightarrow #pi^{+}#pi^{-} + X  at #sqrt{s} = 200 GeV }");
+    tex.DrawLatex(1.3, hTheoryBand->GetMaximum() * 0.02, "#font[22]{|#eta^{#pi^{+}#pi^{-}}| < 1, 1 < p_{T}^{#pi^{+}#pi^{-}} < 15 (GeV/c), 0.02 < cone < 0.7}");
+    tex.DrawLatex(1.3, hTheoryBand->GetMaximum() * 0.006, "#font[22]{0.27 < M_{inv}^{#pi^{+}#pi^{-}} < 4.0 (GeV/c^{2}),  L_{int} = 26 (pb)^{-1} }");
+
+    pad1clear->Update();
+
+    can->cd();
+    TPad *pad2 = new TPad("pad2", "", 0, 0.05, 1.0, 0.3);
+    pad2->SetTopMargin(0);
+    pad2->SetBottomMargin(0.25);
+    pad2->SetLeftMargin(0.15);
+    pad2->SetRightMargin(0.15);
+    pad2->Draw();
+    pad2->cd();
+    pad2->SetGrid(0, 0);
+
+    pad2->Update();
+
+    hsys_err->GetYaxis()->SetRangeUser(-0.6, 0.6);
+    hsys_err->GetYaxis()->SetLabelSize(0.11);
+    hsys_err->GetYaxis()->SetTitleOffset(0.55);
+    // hsys_err->GetYaxis()->SetTitle("#font[22]{#frac{#sigma_{pyth} - #sigma_{mes}}{#sigma_{mes}}}");
+    hsys_err->GetYaxis()->SetTitle("#font[22]{(#frac{#delta#sigma}{#sigma})_{mes}}");
+    hsys_err->GetYaxis()->SetTitleSize(0.11);
+    hsys_err->GetXaxis()->SetLabelOffset(0.02);
+    TAxis *xAxis = hsys_err->GetXaxis();
+    xAxis->SetLabelFont(22);
+    TAxis *yAxis = hsys_err->GetYaxis();
+    yAxis->SetLabelFont(22);
+    hsys_err->GetXaxis()->SetTitle("#font[22]{M_{inv}^{#pi^{+}#pi^{-}} (GeV/c^{2})}");
+    hsys_err->GetXaxis()->SetTitleOffset(1.1);
+    hsys_err->GetXaxis()->SetTitleSize(0.11);
+    hsys_err->GetXaxis()->CenterTitle();
+    hsys_err->GetYaxis()->CenterTitle();
+    hsys_err->GetXaxis()->SetLabelSize(0.11);
+
+    hsys_err->GetXaxis()->SetTickLength(0.08);
+    hsys_err->GetYaxis()->SetNdivisions(505);
+    hsys_err->SetFillColorAlpha(8, 1.0);
+    hsys_err->SetFillStyle(1000);
+    hsys_err->Draw("E2");
+
+    pad2->Update();
+    TLine *l1 = new TLine(pad2->GetUxmin(), 0.0, pad2->GetUxmax(), 0.0);
+    l1->SetLineWidth(2);
+    l1->SetLineStyle(2);
+    l1->Draw();
+    pad2->Update();
+
+    hstat_err->SetFillColorAlpha(2, 1);
+    hstat_err->Draw("E2 SAME");
+
+    // draw relative difference between pythia and measured
+    TH1D *hrdiff = (TH1D *)hpyth->Clone();
+    hrdiff->Add(hcom, -1);
+    hrdiff->Divide(hcom);
+    TH1D *hrdiff_c = (TH1D *)hrdiff->Clone();
+    hrdiff_c->Reset();
+
+    for (int i = 1; i <= hrdiff->GetNbinsX(); i++)
+    {
+        if (hrdiff->GetBinContent(i) == 0)
+            continue;
+        hrdiff_c->SetBinContent(i, hrdiff->GetBinContent(i));
+        hrdiff_c->SetBinError(i, 0.0001);
+    }
+    // hrdiff_c->SetMarkerColor(2);
+    //  hrdiff_c->SetMarkerStyle(8);
+    /// hrdiff_c->SetMarkerSize(0.5);
+    hrdiff_c->SetLineColor(1);
+    hrdiff_c->SetLineWidth(2);
+    hrdiff_c->Draw("e1 SAME");
+
+    pad2->Update();
+    TGaxis *axis2 = new TGaxis(pad2->GetUxmax(), pad2->GetUymin(), pad2->GetUxmax(), pad2->GetUymax(), -0.6, 0.6, 505, "+L");
+    axis2->SetTitle("#font[22]{Ratio}");
+    axis2->SetTitleSize(0.11);
+    axis2->SetLabelSize(0.11);
+    axis2->SetTextFont(22);
+    axis2->SetLabelFont(22);
+    axis2->SetLabelOffset(0.01);
+    axis2->SetTitleOffset(0.4);
+    axis2->CenterTitle();
+    axis2->Draw();
+
+    TLegend *lg1 = new TLegend(0.25, 0.85, 0.75, 0.95);
+    lg1->SetNColumns(3);
+    // lg1->AddEntry(hsys_err, "#font[22]{ #delta#sigma_{sys}}", "f");
+    lg1->AddEntry(hsys_err, "#font[22]{(#frac{#delta#sigma}{#sigma})_{mes}^{Syst.}}", "f");
+    // lg1->AddEntry(hstat_err, "#font[22]{ #delta#sigma_{stat}}", "f");
+    lg1->AddEntry(hstat_err, "#font[22]{(#frac{#delta#sigma}{#sigma})_{mes}^{Stat.}}", "f");
+    // lg1->AddEntry(hrdiff_c, "#font[22]{ #times 0.5}", "lp");
+    lg1->AddEntry(hrdiff_c, "#font[22]{Ratio(= #frac{d#sigma_{pyth} - d#sigma_{mes}}{d#sigma_{mes}})}", "lp");
+    lg1->SetTextSize(0.07);
+    lg1->Draw();
+    gPad->Update();
+
+    TLatex tex1;
+    tex1.SetTextSize(0.08);
+    // tex1.DrawLatex(0.45, hsys_err->GetMinimum() + 0.25, "#font[12]{10\% luminosity measurement uncertainty not shown.}");
+    tex1.DrawLatex(0.35, -0.48, "#font[22]{10\% luminosity uncertainty not shown.}");
+
+    can->Update();
 }
 
 void printArrayValues(int size, double val[], const char *valName)

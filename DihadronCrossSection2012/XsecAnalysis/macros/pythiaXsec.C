@@ -29,6 +29,7 @@ void pythiaXsec()
     double partPtRange[nBins + 1] = {2., 3., 4., 5., 7., 9., 11., 15., 20., 25., 35., 45., 55., -1};
 
     Double_t crossSection[nBins] = {9.0012e+00, 1.46253e+00, 3.54466e-01, 1.51622e-01, 2.49062e-02, 5.84527e-03, 2.30158e-03, 3.42755e-04, 4.57002e-05, 9.72535e-06, 4.69889e-07, 2.69202e-08, 1.43453e-09}; // in mb
+    Double_t crossSectionStatError[13] = {0.189779, 0.0339451, 0.00867607, 0.00354122, 0.000575684, 0.000136599, 5.51271e-05, 8.14065e-06, 1.09002e-06, 2.7468e-07, 1.21204e-08, 7.09449e-10, 3.98256e-11};  // in mb
 
     Double_t numEvents[nBins] = {3318626, 3301413, 3291662, 3280010, 3282543, 3275693, 3276437, 3276795, 3272804, 2179660, 2183230, 1091927, 1090857}; // number of events in file after processing MuDsts
 
@@ -46,33 +47,30 @@ void pythiaXsec()
         ptBinLumi[i] = (numEvents[i] / (crossSection[i] * 1e9));
     }
 
-    TFile *frawX = new TFile("pythiaXsecAll.root", "R");
+    TFile *frawX = new TFile("PythiaXsec/pythiaXsecAll.root", "R");
     // TFile *frawX = new TFile("PythiaXsec/test.root", "R");
 
     // get raw cross section in each pt bins
     TH1D *hrawX[13];
     TH1D *hevProcess[13];
     double lum[13] = {0};
+    double lumError[13] = {0};
     double evProcessed[13] = {0};
 
     ofstream foutpyth;
-    foutpyth.open("fpythia_events_lum.tex");
-    foutpyth << "\\hline \\hline" << endl;
-    foutpyth << "$p_T$ Bin (GeV/c) & $N_{p_T}^{tried}$ & $N_{p_T}^{gen}$ & $N_{p_T}^{pro}$ & $\\sigma_{p_T}$ (pb) & L ($pb^{-1}$) \\\\" << endl;
+    foutpyth.open("ResultsMinConeCut/fpythia_events_lum.tex");
 
+    foutpyth << "$p_T$ Bin  & $N_{p_T}^{tried}$ & $N_{p_T}^{gen}$ & $N_{p_T}^{pro}$ & $\\sigma_{p_T}$  & $\\delta\\sigma_{p_T}$  & L ($pb^{-1}$)& $\\delta $L ($pb^{-1}$) \\\\" << endl;
+    foutpyth << "\\hline" << endl;
     for (int i = 0; i < 13; i++)
     {
         hrawX[i] = (TH1D *)frawX->Get(Form("hpythiaMinv_%g_%g", partPtRange[i], partPtRange[i + 1]));
         hevProcess[i] = (TH1D *)frawX->Get(Form("hevProcessed_%g_%g", partPtRange[i], partPtRange[i + 1]));
         evProcessed[i] = hevProcess[i]->Integral();
         lum[i] = evProcessed[i] / (crossSection[i] * 1e9);
+        lumError[i] = lum[i] * sqrt(pow(sqrt(evProcessed[i]) / evProcessed[i], 2) + pow(crossSectionStatError[i] / crossSection[i], 2));
         hrawX[i]->Scale(1. / lum[i]);
-        foutpyth << partPtRange[i] << "$-$" << partPtRange[i + 1] << "&" << setprecision(3) << numTried[i] << "&" << setprecision(3) << numGen[i] << "&" << setprecision(3) << evProcessed[i] << "&" << setprecision(3) << crossSection[i] * 1e9 << "&" << setprecision(3) << lum[i] << "\\\\" << endl;
-
-        for (int j = 1; j <= hrawX[i]->GetNbinsX(); j++)
-        {
-            // double
-        }
+        foutpyth << partPtRange[i] << "$-$" << partPtRange[i + 1] << "&" << setprecision(3) << numTried[i] << "&" << setprecision(3) << numGen[i] << "&" << setprecision(3) << evProcessed[i] << "&" << setprecision(3) << crossSection[i] * 1e9 << "&" << setprecision(3) << crossSectionStatError[i] * 1e9 << "&" << setprecision(3) << lum[i] << "&" << setprecision(3) << lumError[i] << "\\\\" << endl;
     }
     foutpyth << "\\hline \\hline" << endl;
 
@@ -100,23 +98,25 @@ void pythiaXsec()
 
     // hpythiaXsecW->SetMaximum(5e12);
     hpythiaXsecW->SetName("PYTHIA");
+    /*
 
-    TCanvas *c0 = new TCanvas("c0", "", 500, 400);
-    c0->cd();
-    hpythiaXsecW->Draw("hist E ");
-    hmesXsec->SetLineColor(2);
-    hmesXsec->SetName("Measured");
-    hmesXsec->Draw("hist E SAME");
-    c0->SetLogy();
-    c0->BuildLegend();
-    // c0->SaveAs("ResultsMinConeCut/pythia_mes_xsec.pdf");
-    // c0->Delete();
-    TCanvas *c1 = new TCanvas("c1", "", 500, 400);
-    c1->cd();
-    TH1D *hratio = (TH1D *)hmesXsec->Clone();
-    hratio->Add(hpythiaXsecW, -1);
-    hratio->Divide(hpythiaXsecW);
-    hratio->GetYaxis()->SetRangeUser(-2.5, 2.5);
-    hratio->Draw();
-    c1->Update();
+        TCanvas *c0 = new TCanvas("c0", "", 500, 400);
+        c0->cd();
+        hpythiaXsecW->Draw("hist E ");
+        hmesXsec->SetLineColor(2);
+        hmesXsec->SetName("Measured");
+        hmesXsec->Draw("hist E SAME");
+        c0->SetLogy();
+        c0->BuildLegend();
+        // c0->SaveAs("ResultsMinConeCut/pythia_mes_xsec.pdf");
+        // c0->Delete();
+        TCanvas *c1 = new TCanvas("c1", "", 500, 400);
+        c1->cd();
+        TH1D *hratio = (TH1D *)hmesXsec->Clone();
+        hratio->Add(hpythiaXsecW, -1);
+        hratio->Divide(hpythiaXsecW);
+        hratio->GetYaxis()->SetRangeUser(-2.5, 2.5);
+        hratio->Draw();
+        c1->Update();
+    */
 }

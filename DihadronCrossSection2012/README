@@ -1,0 +1,53 @@
+#Cross section analysis directories and macros description
+
+1. BinResolutionAndUnfolding:
+    - For invariant mass bin resolution and unfolding using embedding sample.
+    - StRoot contains macros for both the bin resolution and unfolding.
+    How to run?
+    - Run12pp200Ana.C is the macro that runs the code within StRoot. Run this code interactively, for the test of the macros.
+    - Run12pp200Ana.xml is a schedular which can be used to submit all the jobs in schedular.
+    - The output is the histograms for each runs. Simply add all histograms with hadd (X.root).
+    For bin resolution studiy: 
+    - macros_resolution/Resolution.C determines the bin resolution which takes X.root as input.
+    For unfolding:
+    -macros_unfolding/tunfolddensity_MinConeCut.C does the unflding analysis which takes X.root as input.
+    - All unfolding output are stored as histograms in a root file (unfoldingOutput.root)
+
+2. XsecAnalysis:
+    - This directory is the main directory where the cross-section analysis is performed. 
+    - The StRoot contains macro that reads the data and produces histograms for each runs. 
+    - The single combined histogram is used for the further analysis. This contains the histogram for the unfolding input. 
+    - macros/xsecAnaMinConecut.C is the main macro which gives the final cross-section result.
+    - macros/getAvgQt.C gives the average kinematic values in cross-section bins.
+    For luminosity measurement:
+    - Luminosity/run12Lumi.cxx gives the total luminosity for jp0, jp1, and jp2 reading the luminosity text file per run.
+    For absolute pythia cross-section:
+    -PythiaXsec/* is the directory where the absolute pythia cross section is calculated. 
+    Results directory:
+    - All the final results landed in ResultsMinConeCut.
+
+3. EfficiencyAnalysis:
+    - Tracking/StRoot/* and Run12ppAna* produced histograms for the tracking efficiency analysis.
+    - Tracking/macros/trackEffana.C takes above produced root file and gives the tracking efficiencies values and plots.
+
+4. TriggerBias: 
+    - This directory does the trigger bias systematic uncertainty study as well as trigger efficiency analysis. 
+    GetBiased:
+    - This directory produces histograms for the triggered yields for the bias and efficiency.
+    - StRoot/* and Run12ppAna.* macros are used to produce histograms. 
+    GetUnbiased: 
+    - This directory produces histograms for the unbiased (pythia) yields for the bias and efficiency. 
+    - StRoot/* and Run12ppAna* are used to produce histograms.
+    For trigger efficiency:
+    - macros/trigEff.C reads both histograms to get the trigger efficiency. 
+    For trigger bias:
+    - macros/getTriggerBias.C reads both hisg=tograms to get the trigger bias.
+
+5. PID:
+    - Embedding based correction for the combinatorial background from the misidentification of pions is done. 
+    - StRoot/* and Run12pp200Ana* produces required histograms. 
+    - macros/getTruePionFraction.C reads histogram and gives the correction factor and plots.
+6. PID_SYS:
+    - Embedding based correction for the pion loss due to hard cut on nSigmaPion is done in this directory.
+    - StRoot* and Run12pp200Ana* produces required histograms. 
+    - macros/getTruePionFraction.C gives that fraction reading above produced histogram.      

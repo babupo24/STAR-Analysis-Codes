@@ -117,6 +117,7 @@ void xsecAnaMinConeCutC3()
     double trkefferr_jp2[13] = {7.47627e-07, 5.25193e-07, 4.69177e-07, 5.99939e-07, 6.99555e-07, 1.08637e-06, 1.58333e-06, 2.12297e-06, 3.23232e-06, 5.37244e-06, 8.66935e-06, 1.81999e-05, 5.42626e-05};
 
     // dipion triggering efficiency
+    /*
     // jp0 efficiency and error
     Double_t eff_trg_jp0[13] = {0.0647609, 0.0663649, 0.0734078, 0.0840551, 0.109116, 0.150331, 0.197242, 0.261445, 0.408169, 0.447309, 0.501666, 0.668775, 0.759649};
     Double_t efferr_trg_jp0[13] = {0.000446209, 0.000330274, 0.000310635, 0.000505293, 0.000819134, 0.00188765, 0.00383486, 0.00661998, 0.00748233, 0.0149041, 0.0275889, 0.0519418, 0.0985095};
@@ -126,6 +127,17 @@ void xsecAnaMinConeCutC3()
     // jp2 efficiency and error
     Double_t eff_trg_jp2[13] = {0.00151809, 0.00163691, 0.0019597, 0.0029936, 0.00543582, 0.0104283, 0.0176766, 0.0307442, 0.0640216, 0.0869714, 0.119685, 0.258225, 0.361955};
     Double_t efferr_trg_jp2[13] = {2.11924e-05, 1.42757e-05, 1.59223e-05, 1.75488e-05, 3.76751e-05, 0.000108269, 0.000299922, 0.00065822, 0.00114225, 0.00334942, 0.00557087, 0.0197869, 0.0413919};
+    */
+    // jp0 efficiency and error
+    Double_t eff_trg_jp0[13] = {0.06218, 0.0635835, 0.0666106, 0.0842533, 0.115018, 0.162886, 0.227979, 0.318971, 0.500256, 0.5584, 0.638504, 0.760584, 0.901282};
+    Double_t efferr_trg_jp0[13] = {0.000358476, 0.000264799, 0.000237964, 0.000419787, 0.000761594, 0.00177198, 0.00397223, 0.00726696, 0.00820762, 0.0168248, 0.0306366, 0.052663, 0.103569};
+    // jp1 efficiency and error
+    Double_t eff_trg_jp1[13] = {0.00731371, 0.00773927, 0.00830041, 0.0123315, 0.0206927, 0.0372235, 0.0600657, 0.103605, 0.211771, 0.257325, 0.347275, 0.507202, 0.641553};
+    Double_t efferr_trg_jp1[13] = {7.22544e-05, 5.52032e-05, 4.79204e-05, 8.71347e-05, 0.000165822, 0.000433534, 0.000934156, 0.00208306, 0.00359666, 0.00750071, 0.0155309, 0.0346532, 0.0605443};
+    // jp2 efficiency and error
+    Double_t eff_trg_jp2[13] = {0.00138597, 0.00151376, 0.00168918, 0.00276861, 0.0054136, 0.010864, 0.0205764, 0.0396581, 0.0873528, 0.121622, 0.174098, 0.300651, 0.438564};
+    Double_t efferr_trg_jp2[13] = {1.70826e-05, 1.3147e-05, 1.11464e-05, 1.6876e-05, 5.42097e-05, 9.61059e-05, 0.000298852, 0.000770725, 0.00137986, 0.00379984, 0.00705385, 0.0203718, 0.0420877};
+
     // trigger  bias
     double sys_trigBias[13] = {0.0217904, 0.020958, 0.0230904, 0.0138005, 0.00169444, 0.00280884, 0.00213932, 0.00525629, 0.0149015, 0.0155368, 0.0102302, 0.00550931, 0.033424};
 
@@ -378,24 +390,24 @@ void xsecAnaMinConeCutC3()
         htotal_err->SetBinContent(i + 1, 0.0);
         htotal_err->SetBinError(i + 1, sqrt(pow(norm_stat_err[i - 1], 2) + pow(sys_err[i - 1], 2)));
     }
-    
-        // trigger efficiency systematic studies
-        //trigEff(hxsec_comb, hxsec_jp0, hxsec_jp1, hxsec_jp2);
 
-        // draw money plot
+    // trigger efficiency systematic studies
+    // trigEff(hxsec_comb, hxsec_jp0, hxsec_jp1, hxsec_jp2);
 
-        TCanvas *cmpt = new TCanvas("cmpt", "", 0, 0, 700, 800);
-        drawXsecMoneyPlot(hxsec_comb, hxsec_pyth, hsys_err, hstat_err, htotal_err, cmpt);
+    // draw money plot
 
-     /*   cmpt->SaveAs("ResultsC3/xsec_MoneyPlot.pdf");
-        cmpt->SaveAs("ResultsC3/xsec_MoneyPlot.png");
-        cmpt->SaveAs("ResultsC3/xsec_MoneyPlot.eps");
-        delete cmpt;
+    TCanvas *cmpt = new TCanvas("cmpt", "", 0, 0, 700, 800);
+    drawXsecMoneyPlot(hxsec_comb, hxsec_pyth, hsys_err, hstat_err, htotal_err, cmpt);
 
-        drawXsec(hxsec_comb, hxsec_pyth, hxsec_jp2, hxsec_jp1, hxsec_jp0);
+    cmpt->SaveAs("ResultsC3/xsec_MoneyPlot.pdf");
+    cmpt->SaveAs("ResultsC3/xsec_MoneyPlot.png");
+    cmpt->SaveAs("ResultsC3/xsec_MoneyPlot.eps");
+    delete cmpt;
 
-        drawErrors(htotal_err, hsys_err, hpid_err, hloss_err, htrg_spr_err, hstat_err, hbias_err);
-    */
+    drawXsec(hxsec_comb, hxsec_pyth, hxsec_jp2, hxsec_jp1, hxsec_jp0);
+
+    drawErrors(htotal_err, hsys_err, hpid_err, hloss_err, htrg_spr_err, hstat_err, hbias_err);
+
     fxout->cd();
     hxsec_comb->Write();
     hxsec_jp0->Write();
@@ -586,7 +598,7 @@ void drawXsecMoneyPlot(TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err,
     lx->SetNColumns(2);
     lx->SetTextSize(0.033);
     lx->AddEntry(hcom, "#font[22]{ Measured}", "lep");
-    lx->AddEntry(hpyth, "#font[22]{ Pythia}", "lep");
+    lx->AddEntry(hpyth, "#font[22]{ Pythia 6.4.28 @ Perugia 2012, PARP(90)=0.213, CTEQ6 PDFs}", "lep");
     lx->Draw();
 
     TLatex tex;
@@ -614,7 +626,8 @@ void drawXsecMoneyPlot(TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err,
     hsys_err->GetYaxis()->SetRangeUser(-0.6, 0.6);
     hsys_err->GetYaxis()->SetLabelSize(0.11);
     hsys_err->GetYaxis()->SetTitleOffset(0.55);
-    hsys_err->GetYaxis()->SetTitle("#font[22]{#frac{#sigma_{pyth} - #sigma_{mes}}{#sigma_{mes}}}");
+    // hsys_err->GetYaxis()->SetTitle("#font[22]{#frac{#sigma_{pyth} - #sigma_{mes}}{#sigma_{mes}}}");
+    hsys_err->GetYaxis()->SetTitle("#font[22]{#delta#sigma}");
     hsys_err->GetYaxis()->SetTitleSize(0.11);
     hsys_err->GetXaxis()->SetLabelOffset(0.02);
     hsys_err->GetXaxis()->SetTitle("#font[22]{M_{inv}^{#pi^{+}#pi^{-}} (GeV/c^{2})}");
@@ -660,12 +673,22 @@ void drawXsecMoneyPlot(TH1D *hcom, TH1D *hpyth, TH1D *hsys_err, TH1D *hstat_err,
     hrdiff_c->SetLineWidth(2);
     hrdiff_c->Draw("e1 SAME");
 
+    pad2->Update();
+    TGaxis *axis = new TGaxis(pad2->GetUxmax(), pad2->GetUymin(), pad2->GetUxmax(), pad2->GetUymax(), -0.6, 0.6, 505, "+L");
+    axis->SetTitle("Ratio");
+    axis->SetTitleSize(0.11);
+    axis->SetLabelSize(0.11);
+    axis->SetLabelOffset(0.01);
+    axis->SetTitleOffset(0.08);
+    axis->CenterTitle();
+    axis->Draw();
+
     TLegend *lg1 = new TLegend(0.18, 0.85, 0.38, 0.95);
     lg1->SetNColumns(3);
     // lg1->AddEntry(hsys_err, "#font[22]{ #delta#sigma_{sys}}", "f");
-    lg1->AddEntry(hsys_err, "#font[22]{ #delta_{sys}}", "f");
+    lg1->AddEntry(hsys_err, "#font[22]{ #delta#sigma_{sys}}", "f");
     // lg1->AddEntry(hstat_err, "#font[22]{ #delta#sigma_{stat}}", "f");
-    lg1->AddEntry(hstat_err, "#font[22]{ #delta_{stat}}", "f");
+    lg1->AddEntry(hstat_err, "#font[22]{ #delta#sigma_{stat}}", "f");
     // lg1->AddEntry(hrdiff_c, "#font[22]{ #times 0.5}", "lp");
     lg1->SetTextSize(0.1);
     lg1->Draw();
